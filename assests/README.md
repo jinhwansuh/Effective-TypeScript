@@ -1,0 +1,1 @@
+모든 예시 코드는 https://github.com/danvk/effective-typescript 에 공개되어 있습니다.
