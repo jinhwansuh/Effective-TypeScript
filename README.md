@@ -906,3 +906,69 @@ function get<T>(array: T[], k: string): T {
 
 인덱스 시그니처로 사용된 number 타입은 버그를 잡기 위한 순수 타입스크립트 코드입니다.
 
+### 아이템 17. 변경 관련된 오류 방지를 위해 readonly 사용하기
+
+```typescript
+const a: number[] = [1, 2, 3];
+const b: readonly number[] = a;
+const c: number[] = b; // error:
+//The type 'readonly number[]' is 'readonly' and cannot be assigned to the mutable type 'number[]'.
+```
+
+number[]는 readonly number[]보다 기능이 많기 때문에, readonly number[]의 서브타입이 됩니다 [아이템7](#아이템-7-타입이-값들의-집합이라고-생각하기).
+
+따라서 변경 가능한 배열을 readonly 배열에 할당 할 수 있습니다. 하지만 그 반대는 불가능합니다.
+
+매개변수를 readonly로 선언하면 다음과 같은 일이 생깁니다.
+
+- 타입스크립트는 매개변수가 함수 내에서 변경이 일어나는지 체크합니다.
+- 호출하는 쪽에서는 함수가 매개변수를 변경하지 않는다는 보장을 받게 됩니다.
+- 호출하는 쪽에서 함수에 readonly 배열을 매개변수로 넣을 수도 있습니다.
+
+> readonly는 얕게(shallow) 동작한다는 것에 유의하며 사용해야 합니다.
+
+```typescript
+const dates: readonly Date[] = [new Date()];
+dates.push(new Date()); // error: Property 'push' does not exist on type 'readonly Date[]'.
+dates[0].setFullYear(2037); // 정상
+```
+```typescript
+interface Outer {
+  inner: {
+    x: number;
+  }
+}
+const o: Readonly<Outer> = { inner: { x: 0 }};
+o.inner = { x: 1 }; // error: Cannot assign to 'inner' because it is a read-only property.
+o.inner.x = 1;  // OK
+
+type T = Readonly<Outer>;
+// Type T = {
+//   readonly inner: {
+//     x: number;
+//   };
+// }
+
+// readonly 접근제어자는 inner에 적용되는 것이지 x는 아니라는 것입니다.
+```
+
+현재 시점에는 깊은(deep) readonly 타입이 기본으로 지원되지 않지만, 제너릭을 만들면 깊은 readonly 타입을 사용할 수 있습니다. 그러나 제너릭은 만들기 까다롭기 때문에 라이브러리를 사용하는 게 낫습니다.
+
+인덱스 시그니처에도 readonly를 쓸 수 있습니다. 읽기는 허용하되 쓰기를 방지하는 효과가 있습니다.
+```typescript
+let obj: { readonly [k: string]: number } = {};
+// 또는 Readonly<{[k: string]: number}
+obj.hi = 45;
+//  Index signature in type '{ readonly [k: string]: number; }' only permits reading.
+obj = { ...obj, hi: 12 }; // 정상
+obj = { ...obj, bye: 34 }; // 정상
+```
+
+> 만약 함수가 매개변수를 수정하지 않는 다면 readonly로 선언하는 것이 좋습니다.
+> 
+> readonly 매개변수는 인터페이스를 명확하게 하며, 매개변수가 변경되는 것을 방지합니다.
+> 
+> readonly는 얕게 동작한다는 것을 명심해야 합니다.
+
+
+
