@@ -1343,3 +1343,117 @@ fetchProduct(id);
 > 
 > 혼란을 막기 위해 타입이 다른 값을 다룰 때에는 변수를 재사용하지 않도록 합니다.
 
+### 아이템 21. 타입 넓히기
+
+상수를 사용해서 변수를 초기화할 때 타입을 명시하지 않으면 타입 체커는 타입을 결정해야 합니다.
+
+이 말은 지정된 단일 값을 가지고 할당 가능한 값들의 집합을 유추해야 한다는 뜻입니다.
+
+타입스크립트에서는 이러한 과정을 '**넓히기(widening)**'라고 부릅니다.
+
+넓히기의 과정을 이해한다면 오류의 원인을 파악하고 타입 구문을 더 효과적으로 사용할 수 있을 것입니다.
+
+벡터를 다루는 라이브러리를 작성한다고 가정해 보겠습니다.
+```typescript
+interface Vector3 { x: number; y: number; z: number; }
+function getComponent(vector: Vector3, axis: 'x' | 'y' | 'z') {
+  return vector[axis];
+}
+
+let x = 'x';
+let vec = {x: 10, y: 20, z: 30};
+getComponent(vec, x); // error:
+// Argument of type 'string' is not assignable to parameter of type '"x" | "y" | "z"'.
+```
+
+런타임에 오류 없이 실행되지만, 편집기에서는 오류가 표시됩니다.
+
+x의 타입은 할당 시점에 넓히기가 동작해서 string으로 추론되었습니다.
+
+string 타입은 "x" | "y" | "z" 타입에 할당이 불가능하므로 오류가 된 것입니다.
+
+`const mixed = ['x', 1];`라는 코드의 타입이 추론될수 있는 후보가 상당히 많습니다.
+
+```md
+- ('x' | 1)[]
+- ['x', 1]
+- [string, number]
+- readonly [string, number]
+- (string|number)[]
+- readonly (string|number)[]
+- [any, any]
+- any[]
+```
+
+타입스크립트는 넓히기의 과정을 제어할 수 있도록 몇 가지 방법을 제공합니다.
+
+넓히기 과정을 제어할 수 있는 첫 번째 방법은 const입니다.
+```typescript
+const x = 'x';  // 타입은 "x"
+let vec = {x: 10, y: 20, z: 30};
+getComponent(vec, x);  // 정상
+```
+
+x는 재할당될 수 없으므로 타입스크립트는 의심의 여지 없이 더 좁은 타입("x")으로 추론할 수 있습니다.
+
+그러나 const는 만능이 아닙니다.
+
+다음 코드는 자바스크립트에서 정상입니다.
+```javascript
+const v = {
+  x: 1,
+};
+v.x = 3;
+v.x = '3';
+v.y = 4;
+v.name = 'Pythagoras';
+```
+
+그러나 타입스크립트에서는 세 문장에서 오류가 발생합니다.
+```typescript
+const v = {
+   x: 1,
+ };
+ v.x = 3;  // 정상
+ v.x = '3'; // error: Type '"3"' is not assignable to type 'number'
+ v.y = 4; // Property 'y' does not exist on type '{ x: number; }'
+ v.name = 'Pythagoras'; // Property 'name' does not exist on type '{ x: number; }'
+```
+
+타입 추론의 강도를 직접 제어하려면 타입스크립트의 기본 동작을 재정의해야 합니다.
+
+타입스크립트의 기본 동작을 재정의하는 세 가지 방법이 있습니다.
+
+- 명시적 타입 구문을 제공하는 것입니다.
+
+```typescript
+const v: {x: 1|3|5} = {
+  x: 1,
+};  // 타입이 { x: 1 | 3 | 5; }
+```
+
+- 타입 체커에 추가적인 문맥(아이템 26)을 제공하는 것입니다. (예를 들어, 함수의 매개변수로 값을 전달)
+
+- const 단언문을 사용하는 것입니다.
+
+const 단언문과 변수 선언에 쓰이는 let이나 const와 혼동해서는 안 됩니다.
+
+const 단언문은 온전히 타입 공간의 기법입니다.
+
+```typescript
+const v1 = {
+  x: 1,
+  y: 2,
+};  // 타입은 { x: number; y: number; }
+
+const v2 = {
+  x: 1 as const,
+  y: 2,
+};  // 타입은 { x: 1; y: number; }
+
+const v3 = {
+  x: 1,
+  y: 2,
+} as const;  // 타입은 { readonly x: 1; readonly y: 2; } - 최대한 좁은 타입으로 추론
+```
+
