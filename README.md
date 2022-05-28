@@ -397,3 +397,18 @@ const bob = { name: 'Bob' } as Person; // 타입은 Person
 const alice: Person = {}; // Type '{}' is missing the following properties from type 'Person': name
 const bob = {} as Person; // 오류 없음
 ```
+
+### 아이템 10. 객체 래퍼 타입 피하기
+기본형 값에 메서드를 제공하기 위해 객체 래퍼 타입이 어떻게 쓰이는지 이해해야 합니다. 직접 사용하거나 인스턴스를 생성하는 것은 피해야 합니다.
+
+타입스크립트 객체 래퍼 타입은 지양하고, 대신 기본형 타입을 사용해야 합니다.
+
+String대신 string, Number 대신 number, Boolean 대신 boolean, Symbol대신 symbol, BigInt대신 bigint를 사용해야 합니다.
+
+```typescript
+function isGreeting(phrase: String) {
+  return ['hello', 'good day'].indexOf(phrase);
+} // Argument of type 'string'. 'string' is a primitive, but 'String' is a wrapper object. Prefer using 'string' when possible.
+// string을 사용하도록 메세지가 나온다.
+```
+string은 String에 할당할 수 있지만 String은 string에 할당할 수 없습니다.
