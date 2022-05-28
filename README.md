@@ -728,7 +728,7 @@ type DancingDuo<T extends Name> = [T, T];
 const couple1: DancingDuo<Name> = [
   { first: 'Fred', last: 'Astaire' },
   { first: 'Ginger', last: 'Rogers' },
-]; // OK
+]; // 정상
 const couple2: DancingDuo<{ first: string }> = [
   // Type '{ first: string; }' does not satisfy the constraint 'Name'.
   // Property 'last' is missing in type '{ first: string; }' but required in type 'Name'.
@@ -959,7 +959,7 @@ interface Outer {
 }
 const o: Readonly<Outer> = { inner: { x: 0 }};
 o.inner = { x: 1 }; // error: Cannot assign to 'inner' because it is a read-only property.
-o.inner.x = 1;  // OK
+o.inner.x = 1;  // 정상
 
 type T = Readonly<Outer>;
 // Type T = {
@@ -1278,4 +1278,68 @@ function getQuote(ticker: string): Promise<number> {
   } // 반환 타입을 { x: number; y: number; }로 추론했습니다.
   ```
   반환 타입을 명시하면 더욱 직관적인 표현이 됩니다.
+
+### 아이템 20. 다른 타입에는 다른 변수 
+
+자바스크립트에서는 한 변수를 다른 목적을 가지는 다른 타입으로 재사용해도 됩니다.
+
+**javascript에서는 정상**
+```javascript
+function fetchProduct(id) {}
+function fetchProductBySerialNumber(id) {}
+let id = '12-34-56';
+fetchProduct(id);
+id = 123456;
+fetchProductBySerialNumber(id);
+```
+**typescript에서는 두 가지 오류 발생**
+```typescript
+function fetchProduct(id: string) {}
+function fetchProductBySerialNumber(id: number) {}
+let id = '12-34-56';
+fetchProduct(id);
+
+id = 123456; // error:
+// '123456' is not assignable to type 'string'.
+fetchProductBySerialNumber(id); // error:
+// Argument of type 'string' is not assignable to
+// parameter of type 'number'
+```
+
+위의 예시에서 '**변수의 값은 바뀔 수 있지만 그 타입은 보통 바뀌지 않는다**'라는 관점을 알 수 있습니다.
+
+**유니온 타입을 이용한 예 권장 X**
+```typescript
+let id: string|number = "12-34-56";
+fetchProduct(id);
+
+id = 123456;  // 정상
+fetchProductBySerialNumber(id);  // 정상
+```
+
+**별도의 변수를 도입 권장 O**
+```typescript
+const id = "12-34-56";
+fetchProduct(id);
+
+const serial = 123456;  // 정상
+fetchProductBySerialNumber(serial);  // 정상
+```
+
+타입이 바뀌는 변수는 되도록 피해야 하며, 목적이 다른 곳에는 별도의 변수명을 사용해야 합니다.
+
+지금까지 이야기한 재사용되는 변수와, 다음 예제에 나오는 '가져지는(shadowed)' 변수를 혼동해서는 안 됩니다.
+```typescript
+const id = "12-34-56";
+fetchProduct(id);
+
+{
+  const id = 123456;  // 정상
+  fetchProductBySerialNumber(id);  // 정상
+}
+```
+
+> 변수의 값은 바뀔 수 있지만 타입은 일반적으로 바뀌지 않습니다.
+> 
+> 혼란을 막기 위해 타입이 다른 값을 다룰 때에는 변수를 재사용하지 않도록 합니다.
 
