@@ -970,5 +970,103 @@ obj = { ...obj, bye: 34 }; // 정상
 > 
 > readonly는 얕게 동작한다는 것을 명심해야 합니다.
 
+### 아이템 18. 매핑된 타입을 사용하여 값을 동기화하기
+
+산점도(scatter plot)을 그리기 위한 UI 컴포넌트를 작성한다고 가정해 보겠습니다.
+
+여기에는 디스플레이와 동작을 제어하기 위한 몇 가지 다른 타입의 속성이 포함됩니다.
+```typescript
+interface ScatterProps {
+  // The data
+  xs: number[];
+  ys: number[];
+
+  // Display
+  xRange: [number, number];
+  yRange: [number, number];
+  color: string;
+
+  // Events
+  onClick: (x: number, y: number, index: number) => void;
+}
+```
+
+최적화를 두 가지 방법으로 구현해 보겠습니다.
+
+- 첫 번째, 보수적(conservative) 접근법, 실패에 닫힌(fail close) 접근법 - 오류 발생 시에 적극적으로 대처하는 방향
+```typescript
+function shouldUpdate(
+  oldProps: ScatterProps,
+  newProps: ScatterProps
+) {
+  let k: keyof ScatterProps;
+  for (k in oldProps) {
+    if (oldProps[k] !== newProps[k]) {
+      if (k !== 'onClick') return true;
+    }
+  }
+  return false;
+}
+```
+이 접근법을 이용하면 차트가 정확하지만 너무 자주 그려질 가능성이 있습니다.
+
+- 두 번째, 실패에 열린 접근법
+```typescript
+function shouldUpdate(
+  oldProps: ScatterProps,
+  newProps: ScatterProps
+) {
+  return (
+    oldProps.xs !== newProps.xs ||
+    oldProps.ys !== newProps.ys ||
+    oldProps.xRange !== newProps.xRange ||
+    oldProps.yRange !== newProps.yRange ||
+    oldProps.color !== newProps.color
+    // (no check for onClick)
+  );
+}
+```
+이 코드는 차트를 불필요하게 다시 그리는 단점을 해결했습니다.
+
+하지만 실제로 차트를 다시 그려야 할 경우에 누락되는 일이 생길 수 있습니다.
+
+이는 히포크라테스 전집에 나오는 원칙 중 하나인 '우선, 망치지 말 것(first, do no harm)'을 어기기 때문에 일반적인 경우에 쓰이는 방법은 아닙니다.
+
+새로운 속성이 추가될때 직접 shouldUpdate를 고치도록 하는 게 낫습니다.
+
+이때 타입 체커가 대신 할 수 있게 하는 것이 좋습니다.
+
+<br>
+
+**매핑된 타입과 객체를 사용하는 것**
+```typescript
+const REQUIRES_UPDATE: {[k in keyof ScatterProps]: boolean} = {
+  xs: true,
+  ys: true,
+  xRange: true,
+  yRange: true,
+  color: true,
+  onClick: false,
+};
+
+function shouldUpdate(
+  oldProps: ScatterProps,
+  newProps: ScatterProps
+) {
+  let k: keyof ScatterProps;
+  for (k in oldProps) {
+    if (oldProps[k] !== newProps[k] && REQUIRES_UPDATE[k]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// 나중에 ScatterProps에 새로운 속성을 추가할 경우 REQUIRES_UPDATE의 정의에 오류가 발생합니다.
+```
+
+> 인터페이스에 새로운 속성을 추가할 때, 선택을 강제하도록 매핑된 타입을 고려해야 합니다.
+
+
 
 
