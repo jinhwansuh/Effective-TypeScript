@@ -362,3 +362,21 @@ sortBy(pts, 'z') // error: Argument of type '"z"' is not assignable to parameter
 <img src="https://user-images.githubusercontent.com/39963468/75360762-a06fbd80-58f9-11ea-82d8-e7d2a3d43143.png" width=500>
 </p>
 
+### 아이템 8. 타입 공간과 값 공간의 심벌 구분하기
+타입스크립트 코드를 읽을 때 타입인지 값인지 구분하는 방법을 터득해야 합니다.
+
+```typescript
+interface Person {
+  first: string;
+  last: string;
+}
+const p: Person = { first: 'Leo', last: 'Jankos' };
+function email(p: Person, subject: string, body: string): Response {
+  // ...
+}
+type T1 = typeof p; // 타입은 Person
+type T2 = typeof email; // (p: Person, subject: string, body: string) => Response
+const v1 = typeof p; // 값은 'object'
+const v2 = typeof email; // 값은 function
+```
+
