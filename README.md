@@ -553,6 +553,181 @@ const wyoming: IState = {
 
 타입 선언에는 사용자가 채워야 하는 빈틈이 있을 수 있는데, 바로 이 선언 병합이 그렇습니다.
 
+### 아이템 14 타입 연산과 제너릭 사용으로 반복 줄이기
 
+#### 원기둥(cylinder)의 반지름과 높이, 표면적, 부피를 출력하는 코드
+
+**잘못된 예**
+```javascript
+console.log('Cylinder 1 x 1 ',
+  'Surface area:', 6.283185 * 1 * 1 + 6.283185 * 1 * 1,
+  'Volume:', 3.14159 * 1 * 1 * 1);
+console.log('Cylinder 1 x 2 ',
+  'Surface area:', 6.283185 * 1 * 1 + 6.283185 * 2 * 1,
+  'Volume:', 3.14159 * 1 * 2 * 1);
+console.log('Cylinder 2 x 1 ',
+  'Surface area:', 6.283185 * 2 * 1 + 6.283185 * 2 * 1,
+  'Volume:', 3.14159 * 2 * 2 * 1);
+```
+
+**개선한 코드**
+```javascript
+const surfaceArea = (r, h) => 2 * Math.PI * r * (r + h);
+const volume = (r, h) => Math.PI * r * r * h;
+for (const [r, h] of [[[1, 1], [1, 2], [2, 1]]]) {
+  console.log(
+    `Cylinder ${r} * ${h}`,
+    `Surface area: ${surfaceArea(r, h)}`,
+    `Volume: ${volume(r, h)}`
+  );
+}
+```
+> 이게 바로 같은 코드를 반복하지 말라는 DRY(Don't Repeat Yourself) 원칙입니다.
+
+그런데 반복된 코드를 열심히 제거하며 DRY 원칙을 지켜왔던 개발자라도 타입에 대해서는 간과했을지 모릅니다.
+
+**잘못된 예**
+```typescript
+interface Person {
+  firstName: string;
+  lastName: string;
+}
+interface PersonWithBirthDate {
+  firstName: string;
+  lastName: string;
+  birth: Date;
+}
+// 이경우 middleName을 Person에 추가한다고 가정해 보면 Person과 BirthDate는 아예 다른 타입을 가지게 됩니다.
+```
+
+**좋은 예**
+```typescript
+interface Person {
+  firstName: string;
+  lastName: string;
+}
+interface PersonWithBirthDate extends Person{
+  birth: Date;
+}
+// 이제 추가적인 필드만 작성하면 됩니다.
+
+// 일반적이지는 않지만 인터섹션 연산자 (&)를 쓸 수도 있습니다.
+type PersonWithBirthDate = Person & { birth: Date };
+```
+
+#### 전체 애플리케이션의 상태를 표현하는 State타입과 단지 부분만 표현하는 TopNavState가 있는 경우
+```typescript
+interface State {
+  userId: string;
+  pageTitle: string;
+  recentFiles: string[];
+  pageContents: string;
+}
+interface TopNavState {
+  userId: string;
+  pageTitle: string;
+  recentFiles: string[];
+}
+```
+**State의 부분 집합으로 TopNavState를 정의하는 것이 바람직**
+```typescript
+interface State {
+  userId: string;
+  pageTitle: string;
+  recentFiles: string[];
+  pageContents: string;
+}
+type TopNavState = {
+  userId: State['userId'];
+  pageTitle: State['pageTitle'];
+  recentFiles: State['recentFiles'];
+};
+```
+**좋은 예: 매핑된 타입을 사용**
+```typescript
+type TopNavState = {
+  [k in 'userId' | 'pageTitle' | 'recentFiles']: State[k]
+};
+
+// Pick을 이용
+type TopNavState = Pick<State, 'userId' | 'pageTitle' | 'recentFiles'>;
+```
 
 ```typescript
+interface SaveAction {
+  type: 'save';
+  // ...
+}
+interface LoadAction {
+  type: 'load';
+  // ...
+}
+type Action = SaveAction | LoadAction;
+type ActionType = 'save' | 'load';  // 타입의 반복!
+```
+
+**유니온 인덱싱을 이용하여 ActionType 정의**
+```typescript
+// Action 유니온에 타입을 더 추가하면 ActionType은 자동적으로 그 타입을 포함합니다.
+type ActionType = Action['type'];  // 타입은 "save" | "load"
+
+// ActionType은 Pick을 사용하여 얻게 되는, type 속성을 가지는 인터페이스와는 다릅니다.
+type ActionRec = Pick<Action, 'type'>;  // {type: "save" | "load"}
+```
+
+**값의 형태에 해당하는 타입을 정의하고 싶을 때: typeof를 이용**
+```typescript
+const INIT_OPTIONS = {
+  width: 640,
+  height: 480,
+  color: '#00FF00',
+  label: 'VGA',
+};
+interface Options {
+  width: number;
+  height: number;
+  color: string;
+  label: string;
+}
+
+type Options = typeof INIT_OPTIONS;
+```
+
+제너릭 타입은 타입을 위한 함수와 같습니다.
+
+그리고 함수는 코드에 대한 DRY 원칙을 지킬 때 유용하게 사용됩니다.
+
+따라서 타입에 대한 DRY 원칙의 핵심이 제너릭이라는 것은 어쩌면 당연해 보이는데, 간과한 부분이 있습니다.
+
+함수에서 매개변수로 매핑할 수 있는 값을 제한하기 위해 타입 시스템을 사용하는 것처럼 제너릭 타입에서 매개변수를 제한할 수 있는 방법이 필요합니다.
+
+제너릭 타입에서 매개변수를 제한할 수 있는 방법은 extends를 사용하는 것입니다.
+
+extends를 이용하면 제너릭 매개변수를 특정 타입을 확장한다고 선언 할 수 있습니다.
+
+```typescript
+interface Name {
+  first: string;
+  last: string;
+}
+type DancingDuo<T extends Name> = [T, T];
+
+const couple1: DancingDuo<Name> = [
+  { first: 'Fred', last: 'Astaire' },
+  { first: 'Ginger', last: 'Rogers' },
+]; // OK
+const couple2: DancingDuo<{ first: string }> = [
+  // Type '{ first: string; }' does not satisfy the constraint 'Name'.
+  // Property 'last' is missing in type '{ first: string; }' but required in type 'Name'.
+  { first: 'Sonny' },
+  { first: 'Cher' },
+];
+// {first: string}은 Name을 확장하지 않기 때문에 오류가 발생합니다.
+```
+
+> [타입](#아이템-7-타입이-값들의-집합이라고-생각하기)이 값의 집합이라는 관점에서 생각하면 extends를 '확장'이 아니라 '부분 집합'이라는 걸 이해하는데 도움이 될 겁니다.
+
+점점 더 추상적인 타입을 다루고 있지만, 원래의 목표를 잊으면 안 됩니다.
+
+원래의 목표는 **유효한 프로그램은 통과시키고 무효한 프로그램에는 오류를 발생**시키는 것입니다.
+

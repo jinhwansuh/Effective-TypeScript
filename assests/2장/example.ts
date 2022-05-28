@@ -131,3 +131,67 @@ interface IStateWithPop extends TState {
   population: number;
 }
 type TStateWithPop = IState & { population: number };
+
+console.log();
+
+const surfaceArea = (r, h) => 2 * Math.PI * r * (r + h);
+const volume = (r, h) => Math.PI * r * r * h;
+for (const [r, h] of [
+  [
+    [1, 1],
+    [1, 2],
+    [2, 1],
+  ],
+]) {
+  console.log(
+    `Cylinder ${r} * ${h}`,
+    `Surface area: ${surfaceArea(r, h)}`,
+    `Volume: ${volume(r, h)}`
+  );
+}
+
+interface Person {
+  firstName: string;
+  lastName: string;
+}
+
+interface PersonWithBirthDate {
+  firstName: string;
+  lastName: string;
+  birth: Date;
+}
+
+interface PersonWithBirthDate extends Person {
+  birth: Date;
+}
+
+interface SaveAction {
+  type: 'save';
+  // ...
+}
+interface LoadAction {
+  type: 'load';
+  // ...
+}
+type Action = SaveAction | LoadAction;
+
+type ActionType = Action['type']; // 타입은 "save" | "load"
+
+type ActionRec = Pick<Action, 'type'>; // {type: "save" | "load"}
+
+interface Name {
+  first: string;
+  last: string;
+}
+type DancingDuo<T extends Name> = [T, T];
+
+const couple1: DancingDuo<Name> = [
+  { first: 'Fred', last: 'Astaire' },
+  { first: 'Ginger', last: 'Rogers' },
+]; // OK
+const couple2: DancingDuo<{ first: string }> = [
+  // Type '{ first: string; }' does not satisfy the constraint 'Name'.
+  // Property 'last' is missing in type '{ first: string; }' but required in type 'Name'.
+  { first: 'Sonny' },
+  { first: 'Cher' },
+];
