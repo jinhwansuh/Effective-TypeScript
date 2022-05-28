@@ -476,3 +476,83 @@ const div: BinaryFn = (a, b) => a / b;
 라이브러리를 직접 만든다면 공통 콜백에 타입을 제공해야 합니다.
 
 다른 함수의 시그니처를 참조하려면 typeof fn을 사용하면 됩니다.
+
+### 아이템 13. 타입과 인터페이스의 차이점 알기
+```typescript
+// 타입
+type TState = {
+  name: string;
+  capital: string;
+}
+// 인터페이스
+interface IState {
+  name: string;
+  capital: string;
+}
+```
+인터페이스는 타입을 확장할 수 있으며, 타입은 인터페이스를 확장할 수 있습니다.
+```typescript
+interface IStateWithPop extends TState {
+  population: number;
+}
+type TStateWithPop = IState & { population: number };
+```
+#### 차이점
+유니온 타입은 있지만 유니온 인터페이스라는 개념은 없습니다.
+
+인터페이스는 타입을 확장할 수 있지만, 유니온은 할 수 없습니다.
+
+```typescript
+type Input = { /* ... */ };
+type Output = { /* ... */ };
+interface VariableMap {
+  [name: string]: Input | Output;
+}
+type NamedVariable = (Input | Output) & { name: string };
+```
+위 NamedVariable 타입은 인터페이스로 표현할 수 없습니다.
+
+type 키워드는 일반적으로 interface보다 쓰임새가 많습니다.
+
+type 키워드는 유니온이 될 수도 있고, 매핑된 타입 또는 조건부 타입 같은 고급 기능에 활용되기도 합니다.
+
+튜플과 배열 타입도 type 키워드를 이용해 더 간결하게 표현할 수 있습니다.
+```typescript
+type Pair = [number, number];
+// 인터페이스로는 
+interface Tuple {
+  0: number;
+  1: number;
+  length: 2;
+}
+type StringList = string[];
+type NamedNums = [string, ...number[]];
+```
+인터페이스는 타입에 없는 몇 가지 기능이 있습니다. 
+
+그중 하나는 바로 **보강(augment)** 이 가능하다는 것입니다.
+```typescript
+interface IState {
+  name: string;
+  capital: string;
+}
+interface IState {
+  population: number;
+}
+const wyoming: IState = {
+  name: 'Wyoming',
+  capital: 'Seoul',
+  population: 50000
+} // 정상
+```
+이 예제처럼 속성을 확장하는 것을 '선언 병합(declaration merging)'이라고 합니다.
+
+선업 병합은 주로 타입 선언 파일(6장)에서 사용됩니다.
+
+따라서 타입 선언 파일을 작성 할 때는 선언 병합을 지원하기 위해 반드시 인터페이스를 사용해야 하며 표준을 따라야 합니다.
+
+타입 선언에는 사용자가 채워야 하는 빈틈이 있을 수 있는데, 바로 이 선언 병합이 그렇습니다.
+
+
+
+```typescript
