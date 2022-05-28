@@ -412,3 +412,35 @@ function isGreeting(phrase: String) {
 // string을 사용하도록 메세지가 나온다.
 ```
 string은 String에 할당할 수 있지만 String은 string에 할당할 수 없습니다.
+
+### 아이템 11. 잉여 속성 체크의 한계 인지하기
+타입이 명시된 변수에 객체 리터럴을 할당할 때 타입스크립트는 해당 타입의 속성이 있는지, 그리고 '그 외의 속성은 없는지' 확인합니다.
+
+**잉여 속성 체크**
+```typescript
+const r: Room = {
+  numDoors: 1,
+  ceilingHeightFt: 10,
+  elephant: 'present',
+};
+// Type '{ numDoors: number; ceilingHeightFt: number; elephant: string; }' is not assignable to type 'Room'.
+// Object literal may only specify known properties, and 'elephant' does not exist in type 'Room'
+```
+```typescript
+interface Options {
+  title: string;
+  darkMode?: boolean;
+}
+function createWindow(options: Options) {
+  if (options.darkMode) {
+    setDarkMode();
+  }
+  // ...
+}
+createWindow({ title: 'Spider Solitaire', darkmode: true });
+// Object literal may only specify known properties, but 'darkmode' does not exist in type 'Options'. Did you mean to write 'darkMode'?
+
+const intermediate = { darkmode: true, title: 'Ski Free' };
+const o: Options = intermediate; // 정상
+const k = { darkmode: true, title: 'Ski Free' } as Options; // 정상
+```
