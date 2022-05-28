@@ -195,3 +195,21 @@ const couple2: DancingDuo<{ first: string }> = [
   { first: 'Sonny' },
   { first: 'Cher' },
 ];
+
+// type Rocket = {[property: string]: string};
+// const rocket: Rocket = {
+//   name: 'Falcon 9',
+//   variant: 'v1.0',
+//   thrust: '4,940 kN'
+// } // 정상
+
+interface Rocket {
+  name: string;
+  variant: string;
+  thrust_kN: number;
+}
+const falconHeavy: Rocket = {
+  name: 'Falcon Heavy',
+  variant: 'v1',
+  thrust_kN: 15_200,
+};
