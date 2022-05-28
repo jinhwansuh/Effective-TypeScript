@@ -294,3 +294,71 @@ interface ComponentProps {
 
 타입스크립트가 동작을 어떻게 모델링하는지 알기 위해 타입 선언 파일을 찾아보는 방법을 터득해야 합니다.
 
+### 아이템 7. 타입이 값들의 집합이라고 생각하기
+```typescript
+const x: never = 12;
+// Type 'number' is not assignable to type 'never'.
+```
+**유니온 타입 |**
+```typescript
+type AB = 'A' | 'B';
+const e: AB = 'A';
+const c: AB = 'C'; // Type '"C"' is not assignable to type 'AB'.
+```
+**인터섹션 타입 &**
+```typescript
+interface Person {
+  name: string;
+}
+interface Lifespan {
+  birth: Date;
+  death?: Date;
+}
+type PersonSpan = Person & Lifespan;
+
+const ps: PersonSpan = {
+  name: 'Lu',
+  birth: new Date('2022/05/27'),
+  death: new Date('9999/12/12'),
+}; // 정상
+// 모든 속성을 포함합니다.
+```
+**일반적으로 속성을 가져오는 것은 extends를 사용**
+```typescript
+interface Person {
+  name: string;
+}
+interface PersonSpan extends Person {
+  birth: Date;
+  death?: Date;
+}
+```
+extends 키워드는 제너릭 타입에서 한정자로도 쓰이며, 이 문맥에서는 '**~의 부분 집합**'을 의미하기도 합니다.
+```typescript
+function getKey<K extends string>(val: any, key: K) {
+  // ...
+}
+getKey({}, 'x'); // 정상
+getKey({}, Math.random() < 0.5 ? 'a' : 'b'); // 정상
+getKey({}, document.title); // 정상
+getKey({}, 12); // Argument of type 'number' is not assignable to parameter of type 'string'.
+```
+```typescript
+interface Point {
+  x: number;
+  y: number;
+}
+type PointKeys = keyof Point; // 타입은 'x' | 'y'
+function sortBy<K extends keyof T, T>(vals: T[], key: K): T[] {
+  /// ...
+}
+const pts: Point[] = [{x: 1, y: 1}, {x: 2, y: 0}]
+sortBy(pts, 'x') // 정상, 'x'는 'x'|'y'를 상속 (즉, keyof T)
+sortBy(pts, 'y') // 정상, 'y'는 'x'|'y'를 상속
+sortBy(pts, Math.random() < 0.5 ? 'x' : 'y'); // 정상, 'x'|'y' 는 'x'|'y'를 상속
+sortBy(pts, 'z') // error: Argument of type '"z"' is not assignable to parameter of type 'keyof Point'.
+```
+<p align='center'>
+<img src="https://user-images.githubusercontent.com/39963468/75360762-a06fbd80-58f9-11ea-82d8-e7d2a3d43143.png" width=500>
+</p>
+
