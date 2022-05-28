@@ -444,3 +444,35 @@ const intermediate = { darkmode: true, title: 'Ski Free' };
 const o: Options = intermediate; // 정상
 const k = { darkmode: true, title: 'Ski Free' } as Options; // 정상
 ```
+
+### 아이템 12 함수 표현식에 타입 적용하기
+자바스크립트(그리고 타입스크립트)에서는 함수 '문장(statement)'과 함수 '표현식(expression)'을 다르게 인식합니다.
+
+```typescript
+function rollDice1(sides: number): number { /* ... */ } // 문장
+const rollDice2 = function(sides: number): number { /* ... */ } // 표현식
+const rollDice3 = (sides: number): number => { /* ... */ } // 표현식
+```
+타입스크립트에서는 함수 표현식을 사용하는 것이 좋습니다.
+
+함수의 매개변수부터 반환값까지 전체를 함수 타입으로 선언하여 함수 표현식에 재사용할 수 있다는 장점이 있기 때문입니다.
+
+**함수 타입의 선언은 불필요한 코드의 반복을 줄입니다.**
+```typescript
+function add(a: number, b: number) { return a + b }
+function sub(a: number, b: number) { return a - b }
+function mul(a: number, b: number) { return a * b }
+function div(a: number, b: number) { return a / b }
+
+type BinaryFn = (a: number, b: number) => number;
+const add: BinaryFn = (a, b) => a + b;
+const sub: BinaryFn = (a, b) => a - b;
+const mul: BinaryFn = (a, b) => a * b;
+const div: BinaryFn = (a, b) => a / b;
+```
+
+만약 같은 타입 시그니처를 반복적으로 작성한 코드가 있다면 함수 타입을 분리해 내거나 이미 존재하는 타입을 찾아보도록 합니다.
+
+라이브러리를 직접 만든다면 공통 콜백에 타입을 제공해야 합니다.
+
+다른 함수의 시그니처를 참조하려면 typeof fn을 사용하면 됩니다.
