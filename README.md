@@ -1,4 +1,4 @@
-# Effective-TypeScript
+# Effective TypeScript
 
 > 책: https://effectivetypescript.com/ 
 > 
@@ -7,6 +7,7 @@
 ## 목차
 1. [타입스크립트 알아보기](#1-타입스크립트-알아보기)
 2. [타입스크립트의 타입 시스템](#2-타입스크립트의-타입-시스템)
+3. [타입 추론](#3-타입-추론)
 
 <br>
 
@@ -1089,6 +1090,192 @@ function shouldUpdate(
 
 **[⬆ 상단으로](#목차)**
 
+## 3. 타입 추론
 
+타입스크립트는 타입 추론을 적극적으로 수행합니다.
 
+타입 추론은 수동으로 명시해야 하는 타입 구문의 수를 엄청나게 중여 주기 때문에, 코드의 전체적인 안정성이 향상됩니다.
+
+> 타입스크립트 초보자와 숙련자는 타입 구문의 수에서 차이가 납니다.
+
+숙련된 타입스크립트 개발자는 비교적 적은 수의 구문(그러나 중요한 부분에는 사용)을 사용합니다.
+
+반면, 초보자의 코드는 불필요한 타입 구문으로 도배되어 있을 겁니다.
+
+### 아이템 19. 추론 가능한 타입을 사용해 장황한 코드 방지하기
+
+타입스크립트를 처음 접한 개발자가 자바스크립트 코드를 포팅할 때 가장 먼저 하는 일은 타입 구문을 넣는 것입니다.
+
+타입스크립트가 결국 타입을 위한 언어이기 때문에, 변수를 선언할 때마다 명시해야 한다고 생각하기 때문입니다.
+
+**그러나 타입스크립트의 많은 타입 구문은 사실 불필요합니다.**
+
+모든 변수에 타입을 선언하는 것은 비생산적이며 형편없는 스타일로 여겨집니다.
+
+`let x: number = 12;`는 `let x = 12;`처럼만 해도 충분합니다.
+
+타입스크립트는 입력받아 연산을 하는 함수가 어떤 타입을 반환하는지 정확히 알고 있습니다.
+```typescript
+function square(nums: number[]) {
+  return nums.map(x => x * x);
+}
+const squares = square([1, 2, 3, 4]); // 타입은 number[]
+```
+타입스크립트는 여러분이 예상한 것보다 더 정확하게 추론하기도 합니다.
+```typescript
+const axis1: string = 'x';  // 타입은 string
+const axis2 = 'y';  // 타입은 "y"
+```
+
+타입이 추론되면 리팩터링 역시 용이해집니다.
+```typescript
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+}
+
+function logProduct(product: Product) {
+  const id: number = product.id;
+  const name: string = product.name;
+  const price: number = product.price;
+  console.log(id, name, price);
+}
+
+// id가 string으로 바뀌었을 경우를 생각해
+// 비구조화 할당문을 사용해 구현하는 게 낫습니다.
+
+function logProduct(product: Product) {
+  const {id, name, price} = product;
+  console.log(id, name, price);
+}
+```
+
+어떤 언어들은 매개변수의 최종 사용처까지 참고하여 타입을 추론하지만, 타입스크립트는 최종 사용처까지 고려하지 않습니다.
+
+> 타입스크립트에서 변수의 타입은 일반적으로 처음 등장할 때 결정됩니다.
+
+함수 매개변수에 타입 구문을 생략하는 경우도 간혹 있습니다. 
+
+**기본값이 있는 경우의 예**
+```typescript
+function parseNumber(str: string, base=10) {
+  // ...
+}
+// base의 기본값이 10이기 때문에 base의 타입은 number로 추론됩니다.
+```
+
+보통 타입 정보가 있는 라이브러리에서, 콜백 함수의 매개변수 타입은 자동으로 추론됩니다.
+
+다음 예제에서 express HTTP 서버 라이브러리를 사용하는 request와 response의 타입 선언은 필요하지 않습니다.
+```typescript
+// 이렇게 하지 맙시다.
+app.get('/health', (request: express.Request, response: express.Response) => {
+  response.send('OK');
+});
+
+// 이렇게 합시다.
+app.get('/health', (request, response) => {
+  response.send('OK');
+});
+```
+
+타입이 추론될 수 있음에도 여전히 타입을 명시하고 싶은 몇 가지 상황이 있습니다. 
+
+그중 하나는 **객체 리터럴을 정의**할 때입니다.
+
+```typescript
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+}
+
+function logProduct(product: Product) {
+  const {id, name, price} = product;
+  console.log(id, name, price);
+}
+const furby = {
+  name: 'Furby',
+  id: 630509430963,
+  price: 35,
+};
+logProduct(furby); // error:
+// Argument of type '{ name: string; id: number; price: number; }' is not assignable to parameter of type 'Product'.
+// Types of property 'id' are incompatible.
+// Type 'number' is not assignable to type 'string'.
+```
+
+객체에 타입 구문을 제대로 명시한다면, 실제로 실수가 발생한 부분에 오류를 표시해 줍니다.
+```typescript
+const furby: Product = {
+  name: 'Furby',
+  id: 630509430963, // error: 
+  // Type 'number' is not assignable to type 'string'.
+  price: 35,
+};
+```
+
+마찬가지로 함수의 반환에도 타입을 명시하여 오류를 방지할 수 있습니다.
+
+타입 추론이 가능할지라도 구현상의 오류가 함수를 호출한 곳까지 영향을 미치지 않도록 하기 위해 타입 구문을 명시하는게 좋습니다.
+
+주식 시세를 조회하는 함수를 작성했다고 가정해 보겠습니다.
+```typescript
+function getQuote(ticker: string) {
+  return fetch(`https://quotes.example.com/?q=${ticker}`)
+      .then(response => response.json());
+}
+
+// 이미 조화한 종목을 다시 요청하지 않도록 캐시를 추가합니다.
+const cache: { [ticker: string]: number } = {};
+function getQuote(ticker: string) {
+  if (ticker in cache) {
+    return cache[ticker];
+  }
+  return fetch(`https://quotes.example.com/?q=${ticker}`)
+    .then((response) => response.json())
+    .then((quote) => {
+      cache[ticker] = quote;
+      return quote;
+    });
+}
+```
+그런데 이 코드에는 오류가 있습니다. 
+
+getQuote는 항상 Promise를 반환하므로 if 구문에는 `cache[ticker]`가 아닌 `Promise.resolve(cache[ticker])`가 반환되도록 해야 합니다.
+
+실행해 보면 오류는 getQuote 내부가 아닌 getQuote를 호출한 코드에서 발생합니다.
+
+```typescript
+getQuote('MSFT').then(considerBuying); // error: 
+// Property 'then' does not exist on type 'number | Promise<any>'.
+// Property 'then' does not exist on type 'number'.
+```
+
+이때 의도된 반환 타입 `Promise<number>`을 명시한다면, 정확한 위치에 오류가 표시됩니다.
+```typescript
+function getQuote(ticker: string): Promise<number> {
+  if (ticker in cache) {
+    return cache[ticker]; // error:
+    // Type 'number' is not assignable to type 'Promise<number>'.
+  }
+}
+```
+
+반환 타입을 명시하면, 구현상의 오류가 사용자 코드의 오류로 표시되지 않습니다. (Promise와 관련된 특정 오류를 피하는 데는 async 함수가 효과적입니다. (아이템25))
+
+오류의 위치를 제대로 표시해 주는 이점 외에도, 반환 타입을 명시해야 하는 이유가 두 가지 더 있습니다.
+- 반환 타입을 명시하면 함수에 대해 더욱 명확하게 알 수 있기 때문입니다.
+  - 추후에 코드가 조금 변경되어도 그 함수의 시그니처는 쉽게 바뀌지 않습니다.
+  - 미리 타입을 명시하는 방법은, 함수를 구현하기 전에 테스트를 먼저 작성하는 테스트 주도 개발(test driven development, TDD)과 비슷합니다.
+- 명명된 타입을 사용하기 위해서입니다.
+  - 함수 반환 타입을 명시하지 않았을 때, 
+  ```typescript 
+  interface Vector2D { x: number; y: number; }
+  function add(a: Vector2D, b: Vector2D) {
+    return { x: a.x + b.x, y: a.y + b.y };
+  } // 반환 타입을 { x: number; y: number; }로 추론했습니다.
+  ```
+  반환 타입을 명시하면 더욱 직관적인 표현이 됩니다.
 
