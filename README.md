@@ -21,9 +21,7 @@
 <img src="https://blog.kakaocdn.net/dn/pfMvk/btqSDvgVbI6/s3SiO35LyRIACNtJ2jRXB1/img.jpg" alt="모든 자바스크립트는 타입스크립트이지만, 모든 타입스크립트가 자바스크립트는 아니다." width="200" />
 </p>
 
-
 - 즉, 자바스크립트 프로그램이 타입스크립트라는 명제는 참이지만, 그 반대는 성립하지 않는다.
-
 
 ```javascript
 // 타입스크립트에선 유효
@@ -39,17 +37,19 @@ function greet(who: string) {}
 **타입스크립트에서 타입 체커는 문제점을 찾아낸다. (오타, 연산 오류, 타입오류 등)**
 ```typescript
 let city = 'new york city';
-console.log(city.toUppercase());
+console.log(city.toUppercase()); // error:
 // Property 'toUppercase' does not exist on type 'string'. Did you mean 'toUpperCase'?
-const a = null + 7;
+const a = null + 7; // error:
 // Operator '+' cannot be applied to types 'null' and '7'.
-const b = [] + 12;
+const b = [] + 12; // error:
 // Operator '+' cannot be applied to types 'undefined[]' and 'number'.
-alert('Hello', 'TypeScript');
+alert('Hello', 'TypeScript'); // error:
 // Expected 0-1 arguments, but got 2.
 ```
 
 **[⬆ 상단으로](#목차)**
+
+<br>
 
 ### 아이템 2. 타입스크립트 설정 이해하기
 - 타입 체커의 설정은 거의 100개에 이릅니다.
@@ -69,9 +69,9 @@ function add(a, b) {
 **noImplicitAny가 설정되어 있을 때**
 ```typescript
 function add(a, b) {
-  return a + b;
-}
-// 오류: Parameter 'a' implicitly has an 'any' type. 
+  return a + b; 
+} // error:
+// Parameter 'a' implicitly has an 'any' type. 
 // Parameter 'b' implicitly has an 'any' type.
 ```
 
@@ -85,9 +85,11 @@ const x: number = null;
 // Type 'null' is not assignable to type 'number'.
 ```
 
-- 타입스크립트는 타입을 명시하는 것이 좋고, 엄격한 체크를 하고 싶다면 strict 설정을 고려해야 합니다.
+> 타입스크립트는 타입을 명시하는 것이 좋고, 엄격한 체크를 하고 싶다면 strict 설정을 고려해야 합니다.
 
 **[⬆ 상단으로](#목차)**
+
+<br>
 
 ### 아이템 3. 코드 생성과 타입이 관계없음을 이해하기
 
@@ -106,7 +108,7 @@ $ cat test.ts
 let x = 'hello';
 x = 1234;
 $ tsc test.ts
-// error Type 'number' is not assignable to type 'string'.
+// error: Type 'number' is not assignable to type 'string'.
 
 $ cat test.js
 var x = 'hello';
@@ -160,6 +162,8 @@ async function setLight() {
 
 **[⬆ 상단으로](#목차)**
 
+<br>
+
 ### 아이템 4. 구조적 타이핑에 익숙해지기
 
 자바스크립트는 본질적으로 덕 타이핑(duck typing - 객체가 어떤 타입에 부합하는 변수와 메서드를 가질 경우 객체를 해당 타입에 속하는 것으로 간주하는 방식) 기반입니다.
@@ -211,6 +215,8 @@ Vector3D와 호환되는 {x, y, z} 객체로 calculateLength를 호출하면, �
 
 **[⬆ 상단으로](#목차)**
 
+<br>
+
 ### 아이템 5. any 타입 지양하기
 
 타입스크립트의 타입 시스템은 점진적(gradual)이고 선택적(optional)입니다.
@@ -219,10 +225,9 @@ Vector3D와 호환되는 {x, y, z} 객체로 calculateLength를 호출하면, �
 
 ```typescript
 let age: number;
-age = '12'
-// Type 'string' is not assignable to type 'number'.
-age = '12' as any; // 정상
+age = '12' // error: Type 'string' is not assignable to type 'number'.
 
+age = '12' as any; // 정상
 age += 1; // 정상 age = '121'
 ```
 
@@ -284,6 +289,8 @@ interface ComponentProps {
 
 **[⬆ 상단으로](#목차)**
 
+<br>
+
 ## 2. 타입스크립트의 타입 시스템
 
 타입스크립트는 코드를 자바스크립트로 변환하는 [역할](#아이템-3-코드-생성과-타입이-관계없음을-이해하기)도 하지만 가장 중요한 역할은 타입 시스템에 있습니다. 이것이 타입스크립트를 사용하는 진정한 이유이기도 합니다.
@@ -297,16 +304,15 @@ interface ComponentProps {
 
 ### 아이템 7. 타입이 값들의 집합이라고 생각하기
 ```typescript
-const x: never = 12;
-// Type 'number' is not assignable to type 'never'.
+const x: never = 12; // error: Type 'number' is not assignable to type 'never'.
 ```
-**유니온 타입 |**
+**유니온 타입 ( | )**
 ```typescript
 type AB = 'A' | 'B';
 const e: AB = 'A';
-const c: AB = 'C'; // Type '"C"' is not assignable to type 'AB'.
+const c: AB = 'C'; // error: Type '"C"' is not assignable to type 'AB'.
 ```
-**인터섹션 타입 &**
+**인터섹션 타입 ( & )**
 ```typescript
 interface Person {
   name: string;
@@ -365,6 +371,8 @@ sortBy(pts, 'z') // error: Argument of type '"z"' is not assignable to parameter
 
 **[⬆ 상단으로](#목차)**
 
+<br>
+
 ### 아이템 8. 타입 공간과 값 공간의 심벌 구분하기
 타입스크립트 코드를 읽을 때 타입인지 값인지 구분하는 방법을 터득해야 합니다.
 
@@ -385,6 +393,8 @@ const v2 = typeof email; // 값은 function
 
 **[⬆ 상단으로](#목차)**
 
+<br>
+
 ### 아이템 9. 타입 단언보다는 타입 선언을 사용하기
 
 ```typescript
@@ -393,17 +403,21 @@ interface Person { name: string };
 const alice: Person = { name: 'Alice' }; // 타입은 Person
 const bob = { name: 'Bob' } as Person; // 타입은 Person
 ```
-첫 번째 `alice: Person`은 변수에 '타입 선언'을 붙여서 그 값이 선언된 타입임을 명시합니다.
-두 번째 `as Person`은 '타입 단언'을 수행합니다. 그러면 타입스크립트가 추론한 타입이 있더라도 Person 타입으로 간주합니다.
+
+- 첫 번째 `alice: Person`은 변수에 '타입 선언'을 붙여서 그 값이 선언된 타입임을 명시합니다.
+
+- 두 번째 `as Person`은 '타입 단언'을 수행합니다. 그러면 타입스크립트가 추론한 타입이 있더라도 Person 타입으로 간주합니다.
 
 > 타입 단언보다 타입 선언을 사용하는 게 낫습니다.
 
 ```typescript
-const alice: Person = {}; // Type '{}' is missing the following properties from type 'Person': name
+const alice: Person = {}; // error: Type '{}' is missing the following properties from type 'Person': name
 const bob = {} as Person; // 오류 없음
 ```
 
 **[⬆ 상단으로](#목차)**
+
+<br>
 
 ### 아이템 10. 객체 래퍼 타입 피하기
 기본형 값에 메서드를 제공하기 위해 객체 래퍼 타입이 어떻게 쓰이는지 이해해야 합니다. 직접 사용하거나 인스턴스를 생성하는 것은 피해야 합니다.
@@ -414,7 +428,7 @@ String대신 string, Number 대신 number, Boolean 대신 boolean, Symbol대신 
 
 ```typescript
 function isGreeting(phrase: String) {
-  return ['hello', 'good day'].indexOf(phrase);
+  return ['hello', 'good day'].indexOf(phrase); // error:
 } // Argument of type 'string'. 'string' is a primitive, but 'String' is a wrapper object. Prefer using 'string' when possible.
 // string을 사용하도록 메세지가 나옵니다.
 ```
@@ -422,15 +436,21 @@ string은 String에 할당할 수 있지만 String은 string에 할당할 수 �
 
 **[⬆ 상단으로](#목차)**
 
+<br>
+
 ### 아이템 11. 잉여 속성 체크의 한계 인지하기
 타입이 명시된 변수에 객체 리터럴을 할당할 때 타입스크립트는 해당 타입의 속성이 있는지, 그리고 '그 외의 속성은 없는지' 확인합니다.
 
 **잉여 속성 체크**
 ```typescript
+interface Room {
+  numDoors: number;
+  ceilingHeightFt: number;
+}
 const r: Room = {
   numDoors: 1,
   ceilingHeightFt: 10,
-  elephant: 'present',
+  elephant: 'present', // error:
 };
 // Type '{ numDoors: number; ceilingHeightFt: number; elephant: string; }' is not assignable to type 'Room'.
 // Object literal may only specify known properties, and 'elephant' does not exist in type 'Room'
@@ -453,6 +473,10 @@ const intermediate = { darkmode: true, title: 'Ski Free' };
 const o: Options = intermediate; // 정상
 const k = { darkmode: true, title: 'Ski Free' } as Options; // 정상
 ```
+
+**[⬆ 상단으로](#목차)**
+
+<br>
 
 ### 아이템 12 함수 표현식에 타입 적용하기
 자바스크립트(그리고 타입스크립트)에서는 함수 '문장(statement)'과 함수 '표현식(expression)'을 다르게 인식합니다.
@@ -487,6 +511,8 @@ const div: BinaryFn = (a, b) => a / b;
 다른 함수의 시그니처를 참조하려면 typeof fn을 사용하면 됩니다.
 
 **[⬆ 상단으로](#목차)**
+
+<br>
 
 ### 아이템 13. 타입과 인터페이스의 차이점 알기
 ```typescript
@@ -530,7 +556,7 @@ type 키워드는 유니온이 될 수도 있고, 매핑된 타입 또는 조건
 튜플과 배열 타입도 type 키워드를 이용해 더 간결하게 표현할 수 있습니다.
 ```typescript
 type Pair = [number, number];
-// 인터페이스로는 
+// 인터페이스로도 표현할 수 있다.
 interface Tuple {
   0: number;
   1: number;
@@ -565,6 +591,8 @@ const wyoming: IState = {
 타입 선언에는 사용자가 채워야 하는 빈틈이 있을 수 있는데, 바로 이 선언 병합이 그렇습니다.
 
 **[⬆ 상단으로](#목차)**
+
+<br>
 
 ### 아이템 14. 타입 연산과 제너릭 사용으로 반복 줄이기
 
@@ -746,6 +774,8 @@ const couple2: DancingDuo<{ first: string }> = [
 
 **[⬆ 상단으로](#목차)**
 
+<br>
+
 ### 아이템 15. 동적 데이터에 인덱스 시그니처 사용하기
 
 자바스크립트의 장점 중 하나는 바로 객체를 생성하는 문법이 간단하다는 것입니다.
@@ -765,6 +795,8 @@ const rocket: Rocket = {
 - 키의 이름: 키의 위치만 표시하는 용도입니다. 타입 체커에서는 사용하지 않습니다.
 - 키의 타입: string이나 number 또는 symbol이 조합이어야 하지만, 보통은 string을 사용합니다(아이템 16).
 - 값의 타입: 어떤 것이든 될 수 있습니다.
+
+<br>
 
 이렇게 타입 체크가 수행되면 네 가지 단점이 드러납니다.
 
@@ -876,6 +908,8 @@ type ABC = {[k in 'a' | 'b' | 'c']: k extends 'b' ? string : number};
 
 **[⬆ 상단으로](#목차)**
 
+<br>
+
 ### 아이템 16. number 인덱스 시그니처보다는 Array, 튜플, ArrayLike를 사용하기
 
 자바스크립트는 이상하게 동작하기로 유명한 언어입니다.
@@ -924,6 +958,8 @@ function get<T>(array: T[], k: string): T {
 인덱스 시그니처로 사용된 number 타입은 버그를 잡기 위한 순수 타입스크립트 코드입니다.
 
 **[⬆ 상단으로](#목차)**
+
+<br>
 
 ### 아이템 17. 변경 관련된 오류 방지를 위해 readonly 사용하기
 
@@ -977,7 +1013,7 @@ type T = Readonly<Outer>;
 ```typescript
 let obj: { readonly [k: string]: number } = {};
 // 또는 Readonly<{[k: string]: number}
-obj.hi = 45;
+obj.hi = 45; // error: 
 //  Index signature in type '{ readonly [k: string]: number; }' only permits reading.
 obj = { ...obj, hi: 12 }; // 정상
 obj = { ...obj, bye: 34 }; // 정상
@@ -990,6 +1026,8 @@ obj = { ...obj, bye: 34 }; // 정상
 > readonly는 얕게 동작한다는 것을 명심해야 합니다.
 
 **[⬆ 상단으로](#목차)**
+
+<br>
 
 ### 아이템 18. 매핑된 타입을 사용하여 값을 동기화하기
 
@@ -1089,6 +1127,8 @@ function shouldUpdate(
 > 인터페이스에 새로운 속성을 추가할 때, 선택을 강제하도록 매핑된 타입을 고려해야 합니다.
 
 **[⬆ 상단으로](#목차)**
+
+<br>
 
 ## 3. 타입 추론
 
@@ -1210,8 +1250,7 @@ logProduct(furby); // error:
 ```typescript
 const furby: Product = {
   name: 'Furby',
-  id: 630509430963, // error: 
-  // Type 'number' is not assignable to type 'string'.
+  id: 630509430963, // error: Type 'number' is not assignable to type 'string'.
   price: 35,
 };
 ```
@@ -1269,6 +1308,9 @@ function getQuote(ticker: string): Promise<number> {
 - 반환 타입을 명시하면 함수에 대해 더욱 명확하게 알 수 있기 때문입니다.
   - 추후에 코드가 조금 변경되어도 그 함수의 시그니처는 쉽게 바뀌지 않습니다.
   - 미리 타입을 명시하는 방법은, 함수를 구현하기 전에 테스트를 먼저 작성하는 테스트 주도 개발(test driven development, TDD)과 비슷합니다.
+
+<br> 
+
 - 명명된 타입을 사용하기 위해서입니다.
   - 함수 반환 타입을 명시하지 않았을 때, 
   ```typescript 
@@ -1278,6 +1320,10 @@ function getQuote(ticker: string): Promise<number> {
   } // 반환 타입을 { x: number; y: number; }로 추론했습니다.
   ```
   반환 타입을 명시하면 더욱 직관적인 표현이 됩니다.
+
+**[⬆ 상단으로](#목차)**
+
+<br>
 
 ### 아이템 20. 다른 타입에는 다른 변수 
 
@@ -1328,7 +1374,7 @@ fetchProductBySerialNumber(serial);  // 정상
 
 타입이 바뀌는 변수는 되도록 피해야 하며, 목적이 다른 곳에는 별도의 변수명을 사용해야 합니다.
 
-지금까지 이야기한 재사용되는 변수와, 다음 예제에 나오는 '가져지는(shadowed)' 변수를 혼동해서는 안 됩니다.
+지금까지 이야기한 재사용되는 변수와, 다음 예제에 나오는 '가려지는(shadowed)' 변수를 혼동해서는 안 됩니다.
 ```typescript
 const id = "12-34-56";
 fetchProduct(id);
@@ -1342,6 +1388,10 @@ fetchProduct(id);
 > 변수의 값은 바뀔 수 있지만 타입은 일반적으로 바뀌지 않습니다.
 > 
 > 혼란을 막기 위해 타입이 다른 값을 다룰 때에는 변수를 재사용하지 않도록 합니다.
+
+**[⬆ 상단으로](#목차)**
+
+<br>
 
 ### 아이템 21. 타입 넓히기
 
@@ -1371,6 +1421,8 @@ getComponent(vec, x); // error:
 x의 타입은 할당 시점에 넓히기가 동작해서 string으로 추론되었습니다.
 
 string 타입은 "x" | "y" | "z" 타입에 할당이 불가능하므로 오류가 된 것입니다.
+
+<br>
 
 `const mixed = ['x', 1];`라는 코드의 타입이 추론될수 있는 후보가 상당히 많습니다.
 
@@ -1416,8 +1468,8 @@ const v = {
  };
  v.x = 3;  // 정상
  v.x = '3'; // error: Type '"3"' is not assignable to type 'number'
- v.y = 4; // Property 'y' does not exist on type '{ x: number; }'
- v.name = 'Pythagoras'; // Property 'name' does not exist on type '{ x: number; }'
+ v.y = 4; // error: Property 'y' does not exist on type '{ x: number; }'
+ v.name = 'Pythagoras'; // error: Property 'name' does not exist on type '{ x: number; }'
 ```
 
 타입 추론의 강도를 직접 제어하려면 타입스크립트의 기본 동작을 재정의해야 합니다.
@@ -1457,3 +1509,6 @@ const v3 = {
 } as const;  // 타입은 { readonly x: 1; readonly y: 2; } - 최대한 좁은 타입으로 추론
 ```
 
+**[⬆ 상단으로](#목차)**
+
+<br>
