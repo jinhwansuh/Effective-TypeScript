@@ -409,7 +409,7 @@ String대신 string, Number 대신 number, Boolean 대신 boolean, Symbol대신 
 function isGreeting(phrase: String) {
   return ['hello', 'good day'].indexOf(phrase);
 } // Argument of type 'string'. 'string' is a primitive, but 'String' is a wrapper object. Prefer using 'string' when possible.
-// string을 사용하도록 메세지가 나온다.
+// string을 사용하도록 메세지가 나옵니다.
 ```
 string은 String에 할당할 수 있지만 String은 string에 할당할 수 없습니다.
 
@@ -859,9 +859,50 @@ type ABC = {[k in 'a' | 'b' | 'c']: k extends 'b' ? string : number};
 // }
 ```
 
+### 아이템 16. number 인덱스 시그니처보다는 Array, 튜플, ArrayLike를 사용하기
 
+자바스크립트는 이상하게 동작하기로 유명한 언어입니다.
 
+그중 가장 악명 높은 것은 암시적 타입 강제와 관계된 부분입니다.
 
+```javascript
+'0' == 0
+// true
+```
+다행이도 암시적 타입 강제와 관련된 문제는 대부분 `===`와 `!==`를 사용해서 해결이 가능합니다.
 
+자바스크립트에서 객체란 키/값 쌍의 모음입니다. 키는 보통 문자열입니다.(ES2015 이후로는 심벌일 수 있습니다). 그리고 값은 어떤 것이든 될 수 있습니다.
 
+```javascript
+x = {};
+x[[1, 2, 3]] = 2;
+// toString 메서드가 호출되어 객체가 문자열로 변환됩니다.
+x; // { '1,2,3': 2 }
+
+// 숫자는 키로 사용할 수 없습니다. 만약 속성 이름으로 숫자를 사용하려고 하면, 자바스크립트 런타임은 문자열로 변환할 겁니다.
+y = { 1: 2, 3: 4 };
+// y = { '1': 2, '3': 4 }
+
+typeof []; // 'object'
+
+k = [1, 2, 3];
+k[0] // 1
+// 문자열 키를 사용해도 역시 배열의 요소에 접근할 수 있습니다.
+k['1'] // 2
+
+// 배열의 키를 나열해보면, 키가 문자열로 출력됩니다.
+Object.keys(k) // [ '0', '1', '2' ]
+```
+
+타입스크립트는 이러한 혼란을 바로잡기 위해 숫자 키를 허용하고, 문자열 키와 다른 것으로 인식합니다.
+
+```typescript
+function get<T>(array: T[], k: string): T {
+  return array[k];
+  // Element implicitly has an 'any' type because index expression is not of type 'number'.
+}
+```
+배열은 객체이므로 키는 숫자가 아니라 문자열입니다.
+
+인덱스 시그니처로 사용된 number 타입은 버그를 잡기 위한 순수 타입스크립트 코드입니다.
 
