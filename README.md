@@ -380,3 +380,20 @@ const v1 = typeof p; // 값은 'object'
 const v2 = typeof email; // 값은 function
 ```
 
+### 아이템 9. 타입 단언보다는 타입 선언을 사용하기
+
+```typescript
+interface Person { name: string };
+
+const alice: Person = { name: 'Alice' }; // 타입은 Person
+const bob = { name: 'Bob' } as Person; // 타입은 Person
+```
+첫 번째 `alice: Person`은 변수에 '타입 선언'을 붙여서 그 값이 선언된 타입임을 명시합니다.
+두 번째 `as Person`은 '타입 단언'을 수행합니다. 그러면 타입스크립트가 추론한 타입이 있더라도 Person 타입으로 간주합니다.
+
+> 타입 단언보다 타입 선언을 사용하는 게 낫습니다.
+
+```typescript
+const alice: Person = {}; // Type '{}' is missing the following properties from type 'Person': name
+const bob = {} as Person; // 오류 없음
+```
