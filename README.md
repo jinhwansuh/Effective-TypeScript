@@ -2526,3 +2526,47 @@ const alanT: Person = {
 
 > 유니온의 인터페이스보다 인터페이스의 유니온이 더 정확하고 타입스크립트가 이해하기도 좋습니다.
 
+### 아이템 32. string 타입보다 더 구체적인 타입 사용하기
+
+string 타입의 범위는 매우 넓습니다. 'x'나 'y'같은 한 글자도, '모비딕'(Moby Dick, "Call me ..."로 시작하는 약 120만 글자의 소설)의 전체 내용도 string 타입입니다.
+
+string타입으로 변수를 선언하려 한다면, 혹시 그보다 더 좁은 타입이 적절하지는 않을지 검토해 보아야 합니다.
+
+```typescript
+interface Album {
+  artist: string;
+  title: string;
+  releaseDate: string;  // YYYY-MM-DD
+  recordingType: string;  // 예를 들어, "live" or "studio"
+}
+
+// 다음 예시처럼 Album 타입에 엉뚱한 값을 설정할 수 있습니다.
+const kindOfBlue: Album = {
+  artist: 'Miles Davis',
+  title: 'Kind of Blue',
+  releaseDate: 'August 17th, 1959',  // 날짜 형식이 다릅니다.
+  recordingType: 'Studio',  // 오타(대문자 S)
+};  // 정상
+```
+
+또한 string 타입의 범위가 넓기 때문에 제대로 된 Album 객체를 사용하더라도 매개변수 순서가 잘못된 것이 오류로 드러나지 않습니다.
+
+```typescript
+function recordRelease(title: string, date: string) { /* ... */ }
+recordRelease(kindOfBlue.releaseDate, kindOfBlue.title);  // 정상, 오류여야 함!
+```
+
+앞의 예제처럼 string 타입이 남용된 코드를 '**문자열을 남발하여 선언되었다(stringly typed)**'고 표현하기도 합니다.
+
+**타입의 범위를 좁히는 방법**
+```typescript
+type RecordingType = 'studio' | 'live';
+
+interface Album {
+  artist: string;
+  title: string;
+  releaseDate: Date;
+  recordingType: RecordingType;
+}
+```
+
