@@ -2182,4 +2182,124 @@ const bestPaid = _(allPlayers)
   .value()  // 타입은 BasketballPlayer[]
 ```
 
+**[⬆ 상단으로](#목차)**
+
+<br>
+
+## 4. 타입 설계
+
+타입 시스템의 큰 장점 중 하나는 데이터 타입을 명확히 알 수 있어 코드를 이해하기 쉽다는 것입니다.
+
+### 아이템 28. 유효한 상태만 표현하는 타입을 지향하기
+
+타입을 잘 설계하면 코드는 직관적으로 작성할 수 있습니다.
+
+효과적으로 타입을 설계하려면, 유효한 상태만 표현할 수 있는 타입을 만들어 내는 것이 가장 중요합니다.
+
+이 아이템은 이런 관점에서 타입 설계가 잘못된 상황을 알아보고, 예제를 통해 잘못된 설계를 바로잡아 볼 것입니다.
+
+웹 애플리케이션을 만든다고 가정하고, 페이지의 상태는 다음처럼 설계했습니다.
+
+```typescript
+interface State {
+  pageText: string;
+  isLoading: boolean;
+  error?: string;
+}
+// 페이지를 그리는 renderPage 함수를 작성할 때는 상태 객체의 필드를 전부 고려해서 상태 표시를 분기해야 합니다.
+function renderPage(state: State) {
+  if (state.error) {
+    return `Error! Unable to load ${currentPage}: ${state.error}`;
+  } else if (state.isLoading) {
+    return `Loading ${currentPage}...`;
+  }
+  return `<h1>${currentPage}</h1>\n${state.pageText}`;
+}
+```
+코드를 살펴보면 분기 조건이 명확히 분리되어 있지 않다는 것을 알 수 있습니다.
+
+isLoading이 true이고 동시에 error 값이 존재하면 로딩 중인 상태인지 오류가 발생한 상태인지 명확히 구분할 수 없습니다.
+
+한편 페이지를 전환하는 changePage 함수는 다음과 같습니다.
+```typescript
+async function changePage(state: State, newPage: string) {
+  state.isLoading = true;
+  try {
+    const response = await fetch(getUrlForPage(newPage));
+    if (!response.ok) {
+      throw new Error(`Unable to load ${newPage}: ${response.statusText}`);
+    }
+    const text = await response.text();
+    state.isLoading = false;
+    state.pageText = text;
+  } catch (e) {
+    state.error = '' + e;
+  }
+}
+```
+changePage에는 많은 문제점이 있습니다.
+- 오류가 발생했을 때, state.isLoading을 false로 설정하는 로직이 빠져 있습니다.
+- state.error를 초기화하지 않았기 때문에, 로딩 메세지 대신 과거 오류 메시지를 보여줍니다.
+- 페이지 로딩 중에 사용자가 페이지를 바꿔 버리면 어떤 일이 벌어질지 예상하기 어렵습니다.
+
+문제는 바로 상태 값의 두 가지 속성이 동시에 정보가 부족하거나(요청이 실패한 것인지 여전히 로딩 중인지), 두 가지 속성이 충돌(오류이면서 동시에 로딩 중일 수)할 수 있다는 것입니다.
+
+다음은 애플리케이션의 상태를 좀 더 제대로 표현한 방법입니다.
+
+``` typescript
+interface RequestPending {
+  state: 'pending';
+}
+interface RequestError {
+  state: 'error';
+  error: string;
+}
+interface RequestSuccess {
+  state: 'ok';
+  pageText: string;
+}
+type RequestState = RequestPending | RequestError | RequestSuccess;
+
+interface State {
+  currentPage: string;
+  requests: {[page: string]: RequestState};
+}
+```
+상태를 나타내는 타입의 코드 길이가 서너 배 길어지긴 했지만, 무효한 상태를 허용하지 않도록 크게 개선되었습니다.
+
+그 결과로 개선된 renderPage와 changePage 함수는 쉽게 구현할 수 있습니다.
+
+```typescript
+function renderPage(state: State) {
+  const {currentPage} = state;
+  const requestState = state.requests[currentPage];
+  switch (requestState.state) {
+    case 'pending':
+      return `Loading ${currentPage}...`;
+    case 'error':
+      return `Error! Unable to load ${currentPage}: ${requestState.error}`;
+    case 'ok':
+      return `<h1>${currentPage}</h1>\n${requestState.pageText}`;
+  }
+}
+
+async function changePage(state: State, newPage: string) {
+  state.requests[newPage] = {state: 'pending'};
+  state.currentPage = newPage;
+  try {
+    const response = await fetch(getUrlForPage(newPage));
+    if (!response.ok) {
+      throw new Error(`Unable to load ${newPage}: ${response.statusText}`);
+    }
+    const pageText = await response.text();
+    state.requests[newPage] = {state: 'ok', pageText};
+  } catch (e) {
+    state.requests[newPage] = {state: 'error', error: '' + e};
+  }
+}
+```
+
+> 유효한 상태와 무효한 상태를 둘 다 표현하는 타입은 혼란을 초래하기 쉽고 오류를 유발하게 됩니다.
+> 
+> 유효한 상태만 표현하는 타입을 지향해야 합니다. 코드가 길어지거나 표현하기 어렵지만 결국은 시간을 절약하고 고틍을 줄일 수 있습니다.
 
