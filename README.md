@@ -2686,3 +2686,72 @@ const snowLeopard: Animal = {
 > 
 > 같은 의미에 다른 이름을 붙이면 안 됩니다. 특별한 의미가 있을 때만 용어를 구분해야 합니다.
 
+### 아이템 37. 공식 명칭에는 상표를 붙이기
+
+구조적 타이핑([아이템 4](#아이템-4-구조적-타이핑에-익숙해지기))의 특성 때문에 가끔 코드가 이상한 결과를 낼 수 있습니다.
+
+```typescript
+interface Vector2D {
+  x: number;
+  y: number;
+}
+function calculateNorm(p: Vector2D) {
+  return Math.sqrt(p.x * p.x + p.y * p.y);
+}
+
+calculateNorm({x: 3, y: 4});  // 정상, 결과는 5
+const vec3D = {x: 3, y: 4, z: 1};
+calculateNorm(vec3D);  // 정상, 결과는 동일하게 5
+```
+
+이 코드는 구조적 타이핑 관점에서는 문제가 없기는 하지만, 수학적으로 따지면 2차원 벡터를 사용해야 이치에 맞습니다.
+
+
+calculateNorm 함수가 3차원 벡터를 허용하지 않게 하려면 공식 명칭(nominal typing)을 사용하면 됩니다.
+
+공식 명칭 개념을 타입스크립트에서 흉내 내려면 '상표(brand)'를 붙이면 됩니다(비유를 들자면 스타벅스가 아니라 커피).
+
+```typescript
+interface Vector2D {
+  _brand: '2d';
+  x: number;
+  y: number;
+}
+function vec2D(x: number, y: number): Vector2D {
+  return {x, y, _brand: '2d'};
+}
+function calculateNorm(p: Vector2D) {
+  return Math.sqrt(p.x * p.x + p.y * p.y);  // 기존과 동일합니다.
+}
+
+calculateNorm(vec2D(3, 4)); // 정상, 5를 반환합니다.
+const vec3D = {x: 3, y: 4, z: 1};
+calculateNorm(vec3D); // error: 
+// Argument of type '{ x: number; y: number; z: number; }' is not assignable to parameter of type 'Vector2D'.
+// Property '_brand' is missing in type '{ x: number; y: number; z: number; }' but required in type 'Vector2D'.
+```
+
+<br>
+
+```typescript
+type Meters = number & {_brand: 'meters'};
+type Seconds = number & {_brand: 'seconds'};
+
+const meters = (m: number) => m as Meters;
+const seconds = (s: number) => s as Seconds;
+
+const oneKm = meters(1000);  // 타입은 Meters
+const oneMin = seconds(60);  // 타입은 Seconds
+const tenKm = oneKm * 10;  // 타입은 number
+const v = oneKm / oneMin;  // 타입은 number
+```
+
+number 타입에 상표를 붙여도 산술연산 후에는 상표가 없어지기 때문에 실제로 사용하기에는 무리가 있습니다.
+
+그러나 코드에 여러 단위가 혼합된 많은 수의 숫자가 들어 있는 경우, 숫자의 단위를 문서화하는 괜찮은 방법일 수 있습니다.
+
+> 타입스크립트는 구조적 타이핑(덕 타이핑)을 사용하기 때문에, 값을 세밀하게 구분하지 못하는 경우가 있습니다.
+> 
+> 상표 기법은 타입 시스템에서 동작하지만 런타임에 상표를 검사하는 것과 동일한 효과를 얻을 수 있습니다.
+
+
