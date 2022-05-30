@@ -1625,3 +1625,92 @@ const members = ['Janet', 'Michael'].map(
 ).filter(isDefined);  // Type is string[]
 ```
 
+### 아이템 23. 한꺼번에 객체 생성하기
+
+[아이템 20](#아이템-20-다른-타입에는-다른-변수)에서 설명했듯이 변수의 값은 변경될 수 있지만, 타입스크립트의 타입은 일반적으로 변경되지 않습니다.
+
+이러한 특성 덕분에 일부 자바스크립트 패턴을 타입스크립트로 모델링하는 게 쉬워집니다.
+
+즉, 객체를 생성할 때는 속성을 하나씩 추가하기보다는 여러 속성을 포함해서 한꺼번에 생성해야 타입 추론에 유리합니다.
+
+다음은 자바스크립트에서는 유효하지만 타입스크립트에서는 오류가 나는 2차원 점을 표현하는 객체를 생성하는 방법입니다.
+
+```typescript
+const pt = {};
+pt.x = 3; // error:
+// Property 'x' does not exist on type '{}'
+pt.y = 4; // error:
+// Property 'y' does not exist on type '{}'
+```
+
+왜냐하면 첫 번째 줄의 pt 타입은 {} 값을 기준으로 추론되기 때문입니다. 존재하지 않는 속성을 추가할 수는 없습니다.
+
+만약 Point 인터페이스를 정의한다면 오류가 다음처럼 바뀝니다.
+```typescript
+interface Point { x: number; y: number; }
+const pt: Point = {}; // error:
+   // Type '{}' is missing the following properties from type 'Point': x, y
+pt.x = 3;
+pt.y = 4;
+
+// 이 문제들은 객체를 한번에 정의하면 해결할 수 있습니다.
+const pt = {
+  x: 3,
+  y: 4,
+}; // 정상
+
+// 단언문을 사용해 타입 체커를 통과하게 할 수 있습니다.
+interface Point { x: number; y: number; }
+const pt = {} as Point;
+pt.x = 3;
+pt.y = 4;  // 정상
+
+// 물론 객체를 한꺼번에 만드는 게 더 낫습니다(아이템 9).
+const pt: Point = {
+  x: 3,
+  y: 4,
+};
+```
+
+작은 객체들을 조합해서 큰 객체를 만들어야 하는 경우에도 여러 단계를 거치는 것은 좋지 않은 생각입니다.
+
+```typescript
+interface Point { x: number; y: number; }
+const pt = {x: 3, y: 4};
+const id = {name: 'Pythagoras'};
+const namedPoint = {};
+Object.assign(namedPoint, pt, id);
+namedPoint.name; // error:
+// Property 'name' does not exist on type '{}'
+
+// 객체 전개 연산자 (...)를 사용하면 큰 객체를 한꺼번에 만들어 낼수 있습니다.
+const namedPoint = {...pt, ...id};
+namedPoint.name;  // 정상, 타입이 string
+```
+
+객체 전개 연산자를 사용하면 타입 걱정 없이 필드 단위로 객체를 생성할 수도 있습니다.
+
+이때 모든 업데이트마다 새 변수를 사용하여 각각 새로운 타입을 얻도록 하는 게 중요합니다.
+
+```typescript
+interface Point { x: number; y: number; }
+const pt0 = {};
+const pt1 = {...pt0, x: 3};
+const pt: Point = {...pt1, y: 4};  // 정상
+```
+
+간단한 객체를 만들기 위해 우회하기는 했지만, 객체에 속성을 추가하고 타입스크립트가 새로운 타입을 추론할 수 있게 해 유용합니다.
+
+전개 연산자로 한꺼번에 여러 속성을 추가할 수도 있습니다.
+```typescript
+declare let hasMiddle: boolean;
+const firstLast = {first: 'Harry', last: 'Truman'};
+const president = {...firstLast, ...(hasMiddle ? {middle: 'S'} : {})};
+
+// 타입이 선택적 속성을 가진 것으로 추론된다는 것을 확인할 수 있습니다.
+// const president: {
+//   middle?: string;
+//   first: string;
+//   last: string;
+// }
+```
