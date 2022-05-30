@@ -1975,3 +1975,152 @@ async 함수에서 프로미스를 반환하면 또 다른 프로미스로 래�
 
 반환 타입은 Promise\<Promise\<T>>가 아닌 Promise\<T>가 됩니다.
 
+### 아이템 26. 타입 추론에 문맥이 어떻게 사용되는지 이해하기
+
+타입스크립트는 타입을 추론할 때 단순히 값만 고려하지는 않습니다.
+
+값이 존재하는 곳의 문맥까지도 살핍니다.
+
+```typescript
+function setLanguage(language: string) { /* ... */ }
+setLanguage('JavaScript');  // 정상
+
+let language = 'JavaScript';
+setLanguage(language);  // 정상
+
+---
+type Language = 'JavaScript' | 'TypeScript' | 'Python';
+function setLanguage(language: Language) { /* ... */ }
+setLanguage('JavaScript');  // 정상
+
+let language = 'JavaScript';
+setLanguage(language); // error :
+// Argument of type 'string' is not assignable to parameter of type 'Language'.
+```
+
+인라인(inline) 형태에서 타입스크립트는 함수 선언을 통해 매개변수가 Language 타입이어야 한다는 것을 알고 있습니다. 해당 타입에 문자열 리터럴 'JavaScript'는 할당 가능하므로 정상입니다.
+
+그러나 이 값을 변수로 분리해 내면, 타입스크립트는 할당 시점에 타입을 추론합니다.
+
+이번 경우는 string으로 추론했고, Language 타입으로 할당이 불가능하므로 오류가 발생했습니다.
+
+위 문제를 해결하는 두 가지 방법
+
+- 첫 번째 해법은 타입 선언에서 language의 가능한 값을 제한하는 것입니다.
+```typescript
+let language: Language = 'JavaScript';
+setLanguage(language);  // 정상
+```
+- 두 번째 해법은 language를 상수로 만드는 것입니다.
+```typescript
+const language = 'JavaScript';
+setLanguage(language);  // 정상
+```
+
+#### 튜플 사용 시 주의점
+문자열 리터럴 타입과 마찬가지로 튜플 타입에서도 문제가 발생합니다.
+
+```typescript
+// 매개변수는 (latitude, longitude) 쌍입니다.
+function panTo(where: [number, number]) { /* ... */ }
+panTo([10, 20]);  // 정상
+
+const loc = [10, 20]; // Type loc = number[]으로 추론됩니다.
+panTo(loc); // error:
+// Argument of type 'number[]' is not assignable to parameter of type '[number, number]'.
+// Target requires 2 element(s) but source may have fewer.
+```
+
+타입스크립트가 의도를 정확히 파악할 수 있도록 타입 선언을 제공하는 방법을 시도해 보겠습니다.
+
+```typescript
+const loc: [number, number] = [10, 20];
+panTo(loc); // 정상
+```
+```typescript
+function panTo(where: [number, number]) { /* ... */ }
+const loc = [10, 20] as const;
+panTo(loc); // error:
+// Readonly [10, 20]' is not assignable to parameter of type '[number, number]'.
+// The type 'readonly [10, 20]' is 'readonly' and cannot be assigned to the mutable type '[number, number]'.
+
+// as const는 그 값이 내부까지 상수라는 사실을 타입스크립트에게 알려 줍니다.
+
+function panTo(where: readonly [number, number]) { /* ... */ }
+const loc = [10, 20] as const;
+panTo(loc);  // 정상
+```
+
+as const의 한 가지 단점은, 만약 타입 정의에 실수가 있다면(예를 들어, 튜플에 세 번째 요소를 추가한다면) 오류는 타입 정의가 아니라 호출되는 곳에서 발생한다는 것입니다.
+
+특히 여러 겹 중첩된 객체에서 오류가 발생한다면 근본적인 원인을 파악하기 어렵습니다.
+
+```typescript
+function panTo(where: readonly [number, number]) { /* ... */ }
+const loc = [10, 20, 30] as const;  // 실제 오류는 여기서 발생합니다.
+panTo(loc); // error:
+// Argument of type 'readonly [10, 20, 30]' is not assignable to
+// parameter of type 'readonly [number, number]'
+// Types of property 'length' are incompatible
+// Type '3' is not assignable to type '2'
+```
+
+#### 객체 사용 시 주의점
+
+```typescript
+type Language = 'JavaScript' | 'TypeScript' | 'Python';
+interface GovernedLanguage {
+  language: Language;
+  organization: string;
+}
+
+function complain(language: GovernedLanguage) { /* ... */ }
+
+complain({ language: 'TypeScript', organization: 'Microsoft' });  // OK
+
+const ts = {
+  language: 'TypeScript', // string으로 추론됩니다.
+  organization: 'Microsoft',
+};
+complain(ts); // error:
+// Argument of type '{ language: string; organization: string; }' is not assignable to parameter of type 'GovernedLanguage'.
+// Types of property 'language' are incompatible.
+// Type 'string' is not assignable to type 'Language'.
+```
+ts 객체에서 language의 타입은 string으로 추론됩니다. 
+
+이 문제는 타입 선언을 추가하거나 `const ts: GovernedLanguage = ...` 상수 단언 `as const`을 사용해 해결합니다([아이템 9](#아이템-9-타입-단언보다는-타입-선언을-사용하기)).
+
+#### 콜백 사용 시 주의점
+
+콜백을 다른 함수로 전달할 때, 타입스크립트는 콜백의 매개변수 타입을 추론하기 위해 문맥을 사용합니다.
+
+```typescript
+function callWithRandomNumbers(fn: (n1: number, n2: number) => void) {
+  fn(Math.random(), Math.random());
+}
+
+callWithRandomNumbers((a, b) => {
+  a;  // 타입이 number
+  b;  // 타입이 number
+  console.log(a + b);
+});
+
+const fn = (a, b) => { // error:
+         // Parameter 'a' implicitly has an 'any' type
+         // Parameter 'b' implicitly has an 'any' type
+  console.log(a + b);
+}
+
+// 이 경우 매개변수에 타입 구문을 추가해서 해결할 수 있습니다.
+const fn = (a: number, b: number) => {
+  console.log(a + b);
+}
+```
+
+> 변수를 뽑아서 별도로 선언했을 때 오류가 발생한다면 타입 선언을 추가해야 합니다.
+> 
+> 변수가 정말로 상수라면 상수 단언(as const)을 사용해야 합니다. 그러나 상수 단언을 사용하면 정의한 곳이 아니라 사용한 곳에서 오류가 발생하므로 주의해야 합니다.
+
+
+
