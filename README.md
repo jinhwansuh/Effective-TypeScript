@@ -2359,4 +2359,170 @@ function sort(nums: readonly number[]) { /* ... */ }
 
 예를 들어 timeMs는 time보다 훨씬 명확하고 temperatureC는 temperature보다 훨씬 명확합니다.
 
+### 아이템 31. 타입 주변에 null 값 배치하기
+
+값이 전부 null이거나 전부 null이 아닌 경우로 분명히 구분된다면, 값이 섞여 있을 때보다 다루기 쉽습니다.
+
+null과 null이 아닌 값을 섞어서 사용하면 클래스에서도 문제가 생깁니다.
+
+```typescript
+interface UserInfo { name: string }
+interface Post { post: string }
+declare function fetchUser(userId: string): Promise<UserInfo>;
+declare function fetchPostsForUser(userId: string): Promise<Post[]>;
+class UserPosts {
+  user: UserInfo | null;
+  posts: Post[] | null;
+
+  constructor() {
+    this.user = null;
+    this.posts = null;
+  }
+
+  async init(userId: string) {
+    return Promise.all([
+      async () => this.user = await fetchUser(userId),
+      async () => this.posts = await fetchPostsForUser(userId)
+    ]);
+  }
+
+  getUserName() {
+    // ...?
+  }
+}
+```
+
+두 번의 네트워크 요청이 로드되는 동안 user와 posts 속성은 null 상태입니다.
+
+어떤 시점에는 둘 다 null이거나, 둘 중 하나만 null이거나, 둘 다 null이 아닐 것입니다. (총 4가지)
+
+**개선된 설계**
+```typescript
+class UserPosts {
+  user: UserInfo;
+  posts: Post[];
+
+  constructor(user: UserInfo, posts: Post[]) {
+    this.user = user;
+    this.posts = posts;
+  }
+
+  static async init(userId: string): Promise<UserPosts> {
+    const [user, posts] = await Promise.all([
+      fetchUser(userId),
+      fetchPostsForUser(userId)
+    ]);
+    return new UserPosts(user, posts);
+  }
+
+  getUserName() {
+    return this.user.name;
+  }
+}
+```
+
+이제 UserPosts 클래스는 완전히 null이 아니게 되었고, 메서드를 작성하기 쉬워졌습니다.
+
+### 아이템 32. 유니온의 인터페이스보다는 인터페이스의 유니온을 사용하기
+
+유니온 타입의 속성을 가지는 인터페이스를 작성 중이라면, 혹시 인터페이스의 유니온 타입을 사용하는 게 더 알맞지는 않을지 검토해 봐야 합니다.
+
+벡터를 그리는 프로그램을 작성 중이고, 특정한 기하학적(geometry) 타입을 가지는 계층의 인터페이스를 정의한다고 가정해 보겠습니다.
+
+```typescript
+interface Layer {
+  layout: FillLayout | LineLayout | PointLayout;
+  paint: FillPaint | LinePaint | PointPaint;
+}
+// layout이 LineLayout 타입이면서 paint 속성이 FillPaint 타입인 것은 말이 되지 않습니다.
+
+// 더 나은 모델링하려면 각각 타입의 계층을 분리된 인터페이스로 둬야 합니다.
+interface FillLayer {
+  layout: FillLayout;
+  paint: FillPaint;
+}
+interface LineLayer {
+  layout: LineLayout;
+  paint: LinePaint;
+}
+interface PointLayer {
+  layout: PointLayout;
+  paint: PointPaint;
+}
+type Layer = FillLayer | LineLayer | PointLayer;
+```
+이런 형태로 Layer를 정의하면 layout과 paint 속성이 잘못된 조합으로 섞이는 경우를 방지할 수 있습니다.
+
+이러한 패턴의 가장 일반적인 예시는 태그된 유니온(or 구분된 유니온)입니다.
+
+Layer의 경우 속성 중의 하나는 문자열 리터럴 타입의 유니온이 됩니다.
+
+```typescript
+interface Layer {
+  type: 'fill' | 'line' | 'point';
+  layout: FillLayout | LineLayout | PointLayout;
+  paint: FillPaint | LinePaint | PointPaint;
+}
+```
+
+하지만, type: 'fill'과 함께 LineLayout과 PointPaint 타입이 쓰이는 것은 말이 되지 않습니다. 
+
+이러한 경우를 방지하기 위해 Layer를 인터페이스의 유니온으로 변환해 보겠습니다.
+
+```typescript
+interface FillLayer {
+  type: 'fill';
+  layout: FillLayout;
+  paint: FillPaint;
+}
+interface LineLayer {
+  type: 'line';
+  layout: LineLayout;
+  paint: LinePaint;
+}
+interface PointLayer {
+  type: 'paint';
+  layout: PointLayout;
+  paint: PointPaint;
+}
+type Layer = FillLayer | LineLayer | PointLayer;
+
+// 이제 type별로 layout과 paint를 뽑아서 쓸 수 있습니다.
+```
+
+<br>
+
+```typescript
+interface Person {
+  name: string;
+  // 다음은 둘 다 동시에 있거나 동시에 없습니다.
+  placeOfBirth?: string;
+  dateOfBirth?: Date;
+}
+```
+
+타입 정보를 담고 있는 주석은 문제가 될 소지가 매우 높습니다([아이템 30](#아이템-30-문서에-타입-정보를-쓰지-않기)).
+
+placeOfBirth와 dateOfBirth 필드는 실제로 관련되어 있지만, 타입 정보에는 어떠한 관계도 표현되지 않았습니다.
+
+두 개의 속성을 하나의 객체로 모으는 것이 더 나은 설계입니다.
+
+```typescript
+interface Person {
+  name: string;
+  birth?: {
+    place: string;
+    date: Date;
+  }
+}
+const alanT: Person = {
+  name: 'Alan Turing',
+  birth: { // error: 
+// Property 'date' is missing in type '{ place: string; }' but required in type '{ place: string; date: Date; }'.ts(2741)
+    place: 'London'
+  }
+}
+```
+
+> 유니온의 인터페이스보다 인터페이스의 유니온이 더 정확하고 타입스크립트가 이해하기도 좋습니다.
 
