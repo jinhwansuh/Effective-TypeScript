@@ -2122,5 +2122,44 @@ const fn = (a: number, b: number) => {
 > 
 > 변수가 정말로 상수라면 상수 단언(as const)을 사용해야 합니다. 그러나 상수 단언을 사용하면 정의한 곳이 아니라 사용한 곳에서 오류가 발생하므로 주의해야 합니다.
 
+### 아이템 27. 함수형 기법과 라이브러리로 타입 흐름 유지하기
+
+타입 흐름을 개선하고, 가독성을 높이고, 명시적인 타입 구문의 필요성을 줄이기 위해 직접 구현하기보다는 내장된 함수형 기법과 로대시(lodash)같은 유틸리티 라이브러리르 사용하는 것이 좋습니다.
+
+allPlayers를 가지고 각 팀별로 연봉 순으로 정렬해서 최고 연봉 선수의 명단을 만든다고 가정해 보겠습니다.
+
+**로대시 없는 방법**
+```typescript
+// 함수형 기법을 쓰지 않은 부분은 타입구문이 필요합니다.
+interface BasketballPlayer {
+  name: string;
+  team: string;
+  salary: number;
+}
+const teamToPlayers: {[team: string]: BasketballPlayer[]} = {};
+for (const player of allPlayers) {
+  const {team} = player;
+  teamToPlayers[team] = teamToPlayers[team] || [];
+  teamToPlayers[team].push(player);
+}
+
+for (const players of Object.values(teamToPlayers)) {
+  players.sort((a, b) => b.salary - a.salary);
+}
+
+const bestPaid = Object.values(teamToPlayers).map(players => players[0]);
+bestPaid.sort((playerA, playerB) => playerB.salary - playerA.salary);
+console.log(bestPaid);
+```
+
+**로대시를 사용해서 동일한 작업을 하는 코드**
+```typescript
+const bestPaid = _(allPlayers)
+  .groupBy(player => player.team)
+  .mapValues(players => _.maxBy(players, p => p.salary)!)
+  .values()
+  .sortBy(p => -p.salary)
+  .value()  // 타입은 BasketballPlayer[]
+```
 
 
