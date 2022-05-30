@@ -1816,3 +1816,162 @@ if (!bbox) {
   // 이제 polygon.bbox와 bbox 는 다른 값을 참조합니다!
 }
 ```
+
+### 아이템 25. 비동기 코드에는 콜백 대신 async 함수 사용하기
+
+과거의 자바스크립트에서는 비동기 동작을 모델링하기 위해 콜백을 사용했습니다.
+
+그렇기 때문에 악명 높은 '콜백 지옥(callback hell)'을 필연적으로 마주할 수 밖에 없었습니다.
+
+```javascript
+fetchURL(url1, function(response1) {
+  fetchURL(url2, function(response2) {
+    fetchURL(url3, function(response3) {
+      // ...
+      console.log(1);
+    });
+    console.log(2);
+  });
+  console.log(3);
+});
+console.log(4);
+
+// 로그:
+// 4
+// 3
+// 2
+// 1
+```
+
+로그에서 보면 알 수 있듯이, 실행의 순서는 코드의 순서와 반대입니다. 이러한 콜백이 중첩된 코드는 직관적으로 이해하기 어렵습니다.
+
+ES2015는 콜백 지옥을 극복하기 위해 프로미스(promise) 개념을 도입했습니다.
+
+프로미스를 사용해 앞의 코드를 수정한 것입니다.
+```javascript
+const page1Promise = fetch(url1);
+page1Promise.then(response1 => {
+  return fetch(url2);
+}).then(response2 => {
+  return fetch(url3);
+}).then(response3 => {
+  // ...
+}).catch(error => {
+  // ...
+});
+```
+ES2017에서는 async와 await 키워드를 도입하여 콜백 지옥을 더욱 간단하게 처리할 수 있게 되었습니다.
+
+```javascript
+async function fetchPages() {
+  try {
+    const response1 = await fetch(url1);
+    const response2 = await fetch(url2);
+    const response3 = await fetch(url3);
+    // ...
+  } catch (e) {
+    // ...
+  }
+}
+```
+
+콜백보다는 프로미스나 async/await를 사용해야 하는 이유는 다음과 같습니다.
+
+- 콜백보다는 프로미스가 코드를 작성하기 쉽습니다.
+- 콜백보다는 프로미스가 타입을 추론하기 쉽습니다.
+
+예를 들어, 병렬로 페이지를 로드하고 싶다면 Promise.all을 사용해서 프로미스를 조합하면 됩니다.
+
+```javascript
+async function fetchPages() {
+  const [response1, response2, response3] = await Promise.all([
+    fetch(url1), fetch(url2), fetch(url3)
+  ]);
+  // ...
+}
+```
+
+이런 경우는 await와 구조 분해 할당이 찰떡궁합입니다.
+
+한편 입력된 프로미스들 중 첫 번째가 처리될 때 완료되는 Promise.race도 타입 추론과 잘 맞습니다. 
+
+Promise.race를 사용하여 프로미스에 타임아웃을 추가하는 방법은 흔하게 사용되는 패턴입니다.
+
+```typescript
+function timeout(millis: number): Promise<never> {
+  return new Promise((resolve, reject) => {
+     setTimeout(() => reject('timeout'), millis);
+  });
+}
+
+async function fetchWithTimeout(url: string, ms: number) {
+  return Promise.race([fetch(url), timeout(ms)]);
+}
+```
+
+타입 구문이 없어도 fetchWithTimeout의 반환 타입은 Promise\<Response>로 추론됩니다.
+
+가끔 프로미스를 직접 생성해야 할 때, 특히 setTimeout과 같은 콜백 API를 래핑할 경우가 있습니다.
+
+그러나 선택의 여지가 있다면 일반적으로는 프로미스를 생성하기보다는 async/await를 사용해야 합니다.
+
+그 이유는
+- 일반적으로 더 간결하고 직관적인 코드가 됩니다.
+- async 함수는 항상 프로미스를 반환하도록 강제됩니다.
+
+```typescript
+// function getNumber(): Promise<number>
+async function getNumber() {
+  return 42;
+}
+const getNumber = async () => 42;  // 타입이 () => Promise<number>
+const getNumber = () => Promise.resolve(42);  // 타입이 () => Promise<number>
+```
+
+함수는 항상 동기 또는 비동기로 실행되어야 하며 절대 혼용해서는 안 됩니다.
+
+**잘못된 예**
+
+```typescript
+const _cache: {[url: string]: string} = {};
+function fetchWithCache(url: string, callback: (text: string) => void) {
+  if (url in _cache) {
+    callback(_cache[url]);
+  } else {
+    fetchURL(url, text => {
+      _cache[url] = text;
+      callback(text);
+    });
+  }
+}
+```
+
+코드가 최적화된 것처럼 보일지 몰라도, 캐시된 경우 콜백함수가 동기로 호출되기 때문에 fetchWithCache 함수는 이제 사용하기가 무척 어려워집니다.
+
+**일관적인 동작 강제 코드**
+```typescript
+const _cache: {[url: string]: string} = {};
+async function fetchWithCache(url: string) {
+  if (url in _cache) {
+    return _cache[url];
+  }
+  const response = await fetch(url);
+  const text = await response.text();
+  _cache[url] = text;
+  return text;
+}
+
+let requestStatus: 'loading' | 'success' | 'error';
+async function getUser(userId: string) {
+  requestStatus = 'loading';
+  const profile = await fetchWithCache(`/user/${userId}`);
+  requestStatus = 'success';
+}
+```
+
+콜백이나 프로미스를 사용하면 실수로 반(half)동기 코드를 작성할 수 있지만, async를 사용하면 항상 비동기 코드를 작성하는 셈입니다.
+
+async 함수에서 프로미스를 반환하면 또 다른 프로미스로 래핑되지 않습니다.
+
+반환 타입은 Promise\<Promise\<T>>가 아닌 Promise\<T>가 됩니다.
+
