@@ -1606,12 +1606,12 @@ function getElementContent(el: HTMLElement) {
 const jackson5 = ['Jackie', 'Tito', 'Jermaine', 'Marlon', 'Michael'];
 const members = ['Janet', 'Michael'].map(
   who => jackson5.find(n => n === who)
-);  // Type is (string | undefined)[]
+);  // 타입은 (string | undefined)[]
 
 // filter함수를 사용해 undefined를 걸러 내려고 해도 잘 동작하지 않을 겁니다.
 const members = ['Janet', 'Michael'].map(
   who => jackson5.find(n => n === who)
-).filter(who => who !== undefined);  // Type is (string | undefined)[]
+).filter(who => who !== undefined);  // 타입은 (string | undefined)[]
 ```
 
 이럴 때 타입 가드를 사용하면 타입을 좁힐 수 있습니다.
@@ -1622,7 +1622,7 @@ function isDefined<T>(x: T | undefined): x is T {
 }
 const members = ['Janet', 'Michael'].map(
   who => jackson5.find(n => n === who)
-).filter(isDefined);  // Type is string[]
+).filter(isDefined);  // 타입은 string[]
 ```
 
 ### 아이템 23. 한꺼번에 객체 생성하기
@@ -1713,4 +1713,106 @@ const president = {...firstLast, ...(hasMiddle ? {middle: 'S'} : {})};
 //   first: string;
 //   last: string;
 // }
+```
+
+### 아이템 24. 일관성 있는 별칭 사용하기
+
+```javascript
+const borough = {name: 'Brooklyn', location: [40.688, -73.979]};
+const loc = borough.location;
+
+// 별칭의 값을 변경하면 원래 속성값에서도 변경됩니다.
+loc[0] = 0;
+borough.location // [0, -73.979]
+```
+그런데 별칭을 남발해서 사용하면 제어 흐름을 분석하기 어렵습니다.
+
+모든 언어의 컴파일러 개발자들은 무분별한 별칭 사용으로 골치를 썩고 있습니다.
+
+타입스크립트에서도 마찬가지로 별칭을 신중하게 사용해야 합니다.
+
+그래야 코드를 잘 이해할 수 있고, 오류도 쉽게 찾을 수 있습니다.
+
+<br>
+
+다각형을 표현하는 자료구조와 어떤 점이 다각형에 포함되는지 체크하는 예시를 보겠습니다.
+
+```typescript
+interface Coordinate {
+  x: number;
+  y: number;
+}
+interface BoundingBox {
+  x: [number, number];
+  y: [number, number];
+}
+interface Polygon {
+  exterior: Coordinate[];
+  holes: Coordinate[][];
+  bbox?: BoundingBox;
+}
+
+function isPointInPolygon(polygon: Polygon, pt: Coordinate) {
+  if (polygon.bbox) {
+    if (pt.x < polygon.bbox.x[0] || pt.x > polygon.bbox.x[1] ||
+        pt.y < polygon.bbox.y[1] || pt.y > polygon.bbox.y[1]) {
+      return false;
+    }
+  }
+
+  // ... 
+}
+```
+이 코드는 잘 동작하지만(타입 체크도 통과) 반복되는 부분이 존재합니다 특히 polygon.bbox는 3줄에 걸쳐 5번이나 등장합니다.
+
+다음 코드는 중복을 줄이기 위해 임시 변수를 뽑아낸 모습입니다.
+
+```typescript
+function isPointInPolygon(polygon: Polygon, pt: Coordinate) {
+  polygon.bbox  // 타입이 BoundingBox | undefined
+  const box = polygon.bbox;
+  box  // 타입이 BoundingBox | undefined
+  if (polygon.bbox) {
+    polygon.bbox  // 타입이 BoundingBox
+    box  // 타입이 BoundingBox | undefined
+    if (pt.x < box.x[0] || pt.x > box.x[1] || // error:
+        //     ~~~                ~~~  Object is possibly 'undefined'
+        pt.y < box.y[1] || pt.y > box.y[1]) { // error:
+        //     ~~~                ~~~  Object is possibly 'undefined'
+      return false;
+    }
+  }
+  // ...
+}
+```
+그리고 box 와 bbox는 같은 값인데 다른 이름을 사용한 것입니다.
+
+객체 비구조화를 이용하면 보다 간결한 문법으로 일관된 이름을 사용할 수 있습니다.
+
+```typescript
+function isPointInPolygon(polygon: Polygon, pt: Coordinate) {
+  const {bbox} = polygon;
+  if (bbox) {
+    const {x, y} = bbox;
+    if (pt.x < x[0] || pt.x > x[1] ||
+        pt.y < x[0] || pt.y > y[1]) {
+      return false;
+    }
+  }
+  // ...
+}
+```
+
+그러나 객체 비구조화를 이용할 때는 두 가지를 주의해야 합니다.
+- 전체 bbox 속성이 아니라 x와 y가 선택적 속성일 경우에 속성 체크가 더 필요합니다. 따라서 타입의 경계에 null 값을 추가하는 것이 좋습니다(아이템 31).
+- bbox에는 선택적 속성이 적합했지만 holes는 그렇지 않습니다. holes가 선택적이라면, 값이 없거나 빈 배열([])이었을 겁니다. 차이가 없는데 이름을 구별한 것입니다. 빈 배열은 'holes 없음'을 나타내는 좋은 방법입니다.
+
+별칭은 타입 체커뿐만 아니라 런타임에도 혼동을 야기할 수 있습니다.
+
+```typescript
+const {bbox} = polygon;
+if (!bbox) {
+  calculatePolygonBbox(polygon);  // polygon.bbox가 채워집니다.
+  // 이제 polygon.bbox와 bbox 는 다른 값을 참조합니다!
+}
 ```
