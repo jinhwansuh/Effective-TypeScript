@@ -2526,7 +2526,7 @@ const alanT: Person = {
 
 > 유니온의 인터페이스보다 인터페이스의 유니온이 더 정확하고 타입스크립트가 이해하기도 좋습니다.
 
-### 아이템 32. string 타입보다 더 구체적인 타입 사용하기
+### 아이템 33. string 타입보다 더 구체적인 타입 사용하기
 
 string 타입의 범위는 매우 넓습니다. 'x'나 'y'같은 한 글자도, '모비딕'(Moby Dick, "Call me ..."로 시작하는 약 120만 글자의 소설)의 전체 내용도 string 타입입니다.
 
@@ -2625,4 +2625,64 @@ interface Point {
 > 코드의 구석 구석까지 타입 안정성을 얻기 위해 API 또는 데이터 형식에 대한 타입 생성을 고려해야 합니다.
 > 
 > 데이터에 드러나지 않는 예외적인 경우들이 문제가 될 수 있기 때문에 데이터보다는 명세로부터 코드를 생성하는 것이 좋습니다.
+
+### 아이템 36. 해당 분야의 용어로 타입 이름 짓기
+
+엄선된 타입, 속성, 변수의 이름은 의도를 명확히 하고 코드와 타입의 추상화 수준을 높여 줍니다.
+
+잘못 선택한 타입 이름은 코드의 의도를 왜곡하고 잘못된 개념을 심어 주게 됩니다.
+
+동물들의 데이터베이스를 구축한다고 가정해 보겠습니다.
+```typescript
+interface Animal {
+  name: string;
+  endangered: boolean;
+  habitat: string;
+}
+const leopard: Animal = {
+  name: 'Snow Leopard',
+  endangered: false,
+  habitat: 'tundra',
+};
+```
+이 코드에는 네 가지 문제가 있습니다.
+- name은 매우 일반적인 용어입니다.
+- endangered 속성이 멸종 위기를 표현하기 위해 boolean 타입을 사용한 것이 이상합니다. 이미 멸종된 동물을 true나 false로 해야 하는지 판단할 수 없습니다. 또, 멸종 위기인지 멸종인지 애매합니다.
+- 서식지를 나타내는 habitat 속성은 너무 범위가 넓은 string 타입([아이템 33](#아이템-33-string-타입보다-더-구체적인-타입-사용하기))일 뿐만 아니라 서식지라는 뜻 자체도 불분명하기 때문에 모호합니다.
+- 객체의 변수명이 leopard이지만, name 속성의 값은 'Snow Leopard'입니다. 객체의 이름과 속성의 name이 다른 의도로 사용된 것인지 불문명합니다.
+
+**개선된, 명확한 코드**
+```typescript
+interface Animal {
+  commonName: string;
+  genus: string;
+  species: string;
+  status: ConservationStatus;
+  climates: KoppenClimate[];
+}
+type ConservationStatus = 'EX' | 'EW' | 'CR' | 'EN' | 'VU' | 'NT' | 'LC';
+type KoppenClimate = |
+  'Af' | 'Am' | 'As' | 'Aw' |
+  'BSh' | 'BSk' | 'BWh' | 'BWk' |
+  'Cfa' | 'Cfb' | 'Cfc' | 'Csa' | 'Csb' | 'Csc' | 'Cwa' | 'Cwb' | 'Cwc' |
+  'Dfa' | 'Dfb' | 'Dfc' | 'Dfd' |
+  'Dsa' | 'Dsb' | 'Dsc' | 'Dwa' | 'Dwb' | 'Dwc' | 'Dwd' |
+  'EF' | 'ET';
+const snowLeopard: Animal = {
+  commonName: 'Snow Leopard',
+  genus: 'Panthera',
+  species: 'Uncia',
+  status: 'VU',  // vulnerable
+  climates: ['ET', 'EF', 'Dfd'],  // alpine or subalpine
+};
+```
+
+타입, 속성, 변수에 이름을 붙일 때 명심해야 할 세 가지 규칙이 있습니다.
+- 동일한 의미를 나타낼 때는 같은 용어를 사용해야 합니다.
+- data, info, thing, item, object, entity 같은 모호하고 의미 없는 이름은 피해야 합니다. 만약 entity라는 용어가 해당 분야에서 특별한 의미를 가진다면 괜찮습니다.
+- 이름을 지을 때는 포함된 내용이나 계산 방식이 아니라 데이터 자체가 무엇인지를 고려해야 합니다. 예를 들어, INodeList보다는 Directory가 더 의미 있는 이름입니다. Directory는 구현의 측면이 아니라 개념적인 측면에서 디렉터리를 생각하게 합니다.
+
+> 가독성을 높이고, 추상화 수준을 올리기 위해서 해당 분야의 용어를 사용해야 합니다.
+> 
+> 같은 의미에 다른 이름을 붙이면 안 됩니다. 특별한 의미가 있을 때만 용어를 구분해야 합니다.
 
