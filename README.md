@@ -3105,3 +3105,159 @@ val  // 타입은 any
 > 
 > any를 진화시키는 방식보다 명시적 타입 구문을 사용하는 것이 안전한 타입을 유지하는 방법입니다.
 
+### 아이템 42. 모르는 타입의 값에는 any대신 unknown을 사용하기
+
+unknown에는 함수의 반환값과 관련된 형태, 변수 선언과 관련된 형태, 단언문과 관련된 형태가 있는데, 이를 순차적으로 알아보겠습니다.
+
+#### 함수의 반환값과 관련된 unknown
+
+YAML 파서인 parseYAML 함수를 작성한다고 가정해 보겠습니다.
+
+```typescript
+function parseYAML(yaml: string): any {
+  // ...
+}
+```
+
+**반환값을 원하는 타입으로 할당하는 것이 이상적**
+```typescript
+interface Book {
+  name: string;
+  author: string;
+}
+const book: Book = parseYAML(`
+  name: Wuthering Heights
+  author: Emily Brontë
+`);
+```
+
+**만약 반환값에 타입 선언을 생략한다면**
+```typescript
+const book = parseYAML(`
+  name: Jane Eyre
+  author: Charlotte Brontë
+`);
+alert(book.title);  // 오류 없음, 런타임에 alerts "undefined"
+book('read');  // 오류 없음, 런타임에 throws "TypeError: book is not a function"
+```
+
+대신 parseYAML이 unknown 타입을 반환하게 만드는 것이 더 안전합니다.
+
+```typescript
+function safeParseYAML(yaml: string): unknown {
+  return parseYAML(yaml);
+}
+const book = safeParseYAML(`
+  name: The Tenant of Wildfell Hall
+  author: Anne Brontë
+`);
+alert(book.title); // error: 
+// Property 'title' does not exist on type 'unknown'.
+book("read"); // error:
+// This expression is not callable.
+// Type '{}' has no call signatures.
+```
+
+unknown 타입을 이해하기 위해서는 할당 가능성의 관점에서 any를 생각해 볼 필요가 있습니다.
+
+any가 강력하면서도 위험한 이유는 다음 두 가지 특징으로부터 비롯됩니다.
+
+- 어떠한 타입이든 any타입에 할당 가능하다.
+- any 타입은 어떠한 타입으로도 할당 가능하다(never 타입은 예외).
+
+'타입을 값의 집합으로 생각하기([아이템 7](#아이템-7-타입이-값들의-집합이라고-생각하기))'의 관점에서, 한 집합은 다른 모든 집합의 부분 집합이면서 동시에 상위집합이 될 수 없기 때문에, 분명히 any는 타입 시스템과 상충되는 면을 가지고 있습니다.
+
+unknown은 any 대신 쓸 수 있는 타입 시스템에 부합하는 타입입니다. 
+
+unknown 타입은 앞에서 언급한 any의 첫 번째 속성(어떠한 타입이든 unknown에 할당 가능)을 만족하지만, 두 번째 속성(unknown은 오직 unknown과 any에만 할당 가능)은 만족하지 않습니다.
+
+<br>
+
+반면 never 타입은 unknown과 정반대입니다.
+
+첫 번째 속성(어떤 타입도 never에 할당할 수 없음)은 만족하지 않지만, 두 번째 속성(어떠한 타입으로도 할당 가능)은 만족합니다.
+
+<br>
+
+한편 unknown 타입인 채로 값을 사용하면 오류가 발생합니다.
+
+```typescript
+const book = safeParseYAML(`
+  name: Villette
+  author: Charlotte Brontë
+`) as Book;
+alert(book.title); // error:
+// Property 'title' does not exist on type 'Book'.
+book('read'); // error:
+// This expression is not callable.
+// Type 'Book' has no call signatures.
+```
+
+함수의 반환 타입인 unknown 그대로 값을 사용할 수 없기 때문에 Book으로 타입 단언을 해야 합니다. 
+
+애초에 반환값이 Book이라고 기대하며 함수를 호출하기 때문에 단언문은 문제가 되지 않습니다.
+
+#### 변수 선언과 관련된 unknown
+
+어떠한 값이 있지만 그 타입을 모르는 경우에 unknown을 사용합니다.
+
+```typescript
+interface Feature {
+  id?: string | number;
+  geometry: Geometry;
+  properties: unknown;
+}
+```
+
+instanceof를 체크한 후 unknown에서 원하는 타입으로 변환할 수 있습니다.
+
+```typescript
+function processValue(val: unknown) {
+  if (val instanceof Date) {
+    val  // 타입은 Date
+  }
+}
+```
+
+또한 사용자 정의 타입 가드도 unknown에서 원하는 타입으로 변환할 수 있습니다.
+
+```typescript
+function isBook(val: unknown): val is Book {
+  return (
+      typeof(val) === 'object' && val !== null &&
+      'name' in val && 'author' in val
+  );
+}
+function processValue(val: unknown) {
+  if (isBook(val)) {
+    val;  // 타입이 Book
+  }
+}
+```
+
+이중 단언문에서 any 대신 unknown을 사용할 수도 있습니다.
+```typescript
+declare const foo: Foo;
+let barAny = foo as any as Bar;
+let barUnk = foo as unknown as Bar;
+```
+
+barAny와 barUnk는 기능적으로 동일하지만, 나중에 두 개의 단언문을 분리하는 리팩터링을 한다면 unknown 형태가 더 안전합니다.
+
+any의 경우는 분리되는 순간 그 영향력이 전염병처럼 퍼지게 됩니다.
+
+그러나 unknown의 경우는 분리되는 즉시 오류를 발생하게 되므로 더 안전합니다.
+
+마지막으로 unknown과 유사하지만 조금 다른 타입들도 알아보겠습니다.
+
+- {} 타입은 null과 undefined를 제외한 모든 값을 포함합니다.
+- object 타입은 모든 비기본형(non-primitive) 타입으로 이루어집니다. 여기에는 true 또는 12 또는 'foo'가 포함되지 않지만 객체와 배열은 포함됩니다.
+
+unknown 타입이 도입되기 전에는 {}가 더 일반적으로 사용되었지만, 최근에는 {}를 사용하는 경우가 꽤 드뭅니다.
+
+정말로 null과 undefined가 불가능하다고 판단되는 경우만 unknown 대신 {}를 사용하면 됩니다.
+
+> unknown은 any 대신 사용할 수 있는 안전한 타입입니다.
+> 
+> 사용자가 타입 단언문이나 타입 체크를 사용하도록 강제하려면 unknown을 사용하면 됩니다.
+
