@@ -69,7 +69,7 @@ function add(a, b) {
 ```
 **noImplicitAny가 설정되어 있을 때**
 ```typescript
-function add(a, b) {
+function add(a, b) { // error:
   return a + b; 
 } // error:
 // Parameter 'a' implicitly has an 'any' type. 
@@ -82,7 +82,7 @@ const x: number = null;
 ```
 **strictNullChecks가 설정되었을 때**
 ```typescript
-const x: number = null;
+const x: number = null; // error:
 // Type 'null' is not assignable to type 'number'.
 ```
 
@@ -103,7 +103,7 @@ const x: number = null;
 - 타입스크립트가 자바스크립트로 변환될 때 코드 내의 타입에는 영향을 주지 않습니다.
 - 그 자바스크립트의 실행 시점에도 타입은 영향을 미치지 않습니다.
 
-#### 타입 오류가 있는 코드도 컴파일이 가능합니다.
+#### 타입 오류가 있는 코드도 컴파일이 가능합니다
 ```typescript
 $ cat test.ts
 let x = 'hello';
@@ -116,14 +116,13 @@ var x = 'hello';
 x = 1234;
 
 // 경고가 있다고 빌드를 멈추지 않습니다.
-// '컴파일에 문제가 있다'보단 '타입 체크에 문제가 있다'
+// '컴파일에 문제가 있다'보단 '타입 체크에 문제가 있다'고 말하는 것이 더 정확한 표현입니다.
 ```
 - 오류가 있을 때 컴파일하지 않으려면, tsconfig.json에 noEmitOnError를 설정하거나 빌드 도구에 동일하게 적용하면 됩니다.
 
+#### 런타임에는 타입 체크가 불가능합니다
 
-#### 런타임에는 타입 체크가 불가능합니다.
-
-#### 타입 연산은 런타임에 영향을 주지 않습니다.
+#### 타입 연산은 런타임에 영향을 주지 않습니다
 
 ```typescript
 function asNumber(val: number | string): number {
@@ -142,7 +141,7 @@ function asNumber(val: number | string): number {
 }
 ```
 
-#### 런타임 타입은 선언된 타입과 다를 수 있습니다.
+#### 런타임 타입은 선언된 타입과 다를 수 있습니다
 ```typescript
 interface LightApiResponse {
   lightSwitchValue: boolean;
@@ -155,9 +154,9 @@ async function setLight() {
 // result의 타입이 API의 타입이 다를수도 있습니다.
 ```
 
-#### 타입스크립트 타입으로는 함수를 오버로드할 수 없습니다.
+#### 타입스크립트 타입으로는 함수를 오버로드할 수 없습니다
 
-#### 타입스크립트 타입은 런타임 성능에 영향을 주지 않습니다.
+#### 타입스크립트 타입은 런타임 성능에 영향을 주지 않습니다
 
 타입과 타입 연산자는 자바스크립트 변환 시점에 제거되기 때문에, 런타임의 성능에 아무런 영향을 주지 않습니다.
 
@@ -188,7 +187,7 @@ interface NamedVector {
 }
 const v: NamedVector = {x: 3, y: 4, name: 'Zee'}
 calculateLength(v); // 정상 return 5;
-// Vector2D와 NamedVector의 관계를 전혀 선언하지 않았다.
+// Vector2D와 NamedVector의 관계를 전혀 선언하지 않았습니다.
 
 // 3D 벡터 추가
 interface Vector3D {
@@ -207,12 +206,12 @@ function normalize(v: Vector3D) {
 }
 
 normalize({ x: 3, y: 3, z: 5 }); // return 1.41
-// 오류를 잡지 못한다.
+// 오류를 잡지 못합니다.
 ```
 
 calculateLength는 2D 벡터를 기반으로 연산하는데, 버그로 인해 normalize가 3D 벡터로 연산되었습니다. z가 정규화에서 무시된 것입니다.
 
-Vector3D와 호환되는 {x, y, z} 객체로 calculateLength를 호출하면, 구조적 타이핑 관점에서 x와 y가 있어서 Vector2D와 호환됩니다. 따라서 오류가 발생하지 않았고, 타입 체커가 문제로 인식하지 않았습니다. (이런 경우를 오류로 처리하기 위한 설정 아이템 37에서 다룹니다.)
+Vector3D와 호환되는 {x, y, z} 객체로 calculateLength를 호출하면, 구조적 타이핑 관점에서 x와 y가 있어서 Vector2D와 호환됩니다. 따라서 오류가 발생하지 않았고, 타입 체커가 문제로 인식하지 않았습니다. (이런 경우를 오류로 처리하기 위한 설정 [아이템 37](#아이템-37-공식-명칭에는-상표를-붙이기)에서 다룹니다.)
 
 **[⬆ 상단으로](#목차)**
 
@@ -222,7 +221,7 @@ Vector3D와 호환되는 {x, y, z} 객체로 calculateLength를 호출하면, �
 
 타입스크립트의 타입 시스템은 점진적(gradual)이고 선택적(optional)입니다.
 
-#### any 타입에는 타입 안전성이 없습니다.
+#### any 타입에는 타입 안전성이 없습니다
 
 ```typescript
 let age: number;
@@ -232,7 +231,7 @@ age = '12' as any; // 정상
 age += 1; // 정상 age = '121'
 ```
 
-#### any는 함수 시그니처(contract)를 무시해 버립니다.
+#### any는 함수 시그니처(contract)를 무시해 버립니다
 함수를 작성할 때는 시그니처(contract)를 명시해야 합니다.
 
 호출하는 쪽은 약속된 타입의 입력을 제공하고, 함수는 약속된 타입의 출력을 반환합니다.
@@ -246,12 +245,12 @@ function calculateAge(birthDate: Date): number {
 let birthDate: any = '1990-01-19';
 calculateAge(birthDate) // 정상
 ```
-#### any 타입에는 언어 서비스가 적용되지 않습니다.
+#### any 타입에는 언어 서비스가 적용되지 않습니다
 any타입을 이용하면 자동완성과 오타 체크를 이용할 수 없습니다.
 
 > 타입스크립트의 모토는 '확장 가능한 자바스크립트'입니다.
 
-#### any 타입은 코드 리팩터링 때 버그를 감춥니다.
+#### any 타입은 코드 리팩터링 때 버그를 감춥니다
 ```typescript
 // 선책하려는 아이템의 타입이 무엇인지 알기 어려워 any를 우선 사용해봅니다.
 interface ComponentProps {
@@ -273,7 +272,7 @@ interface ComponentProps {
 // 타입 체커를 통과함에도 불구하고 런타임에는 오류가 발생할 것입니다.
 ```
 
-#### any는 타입 설계를 감춰버립니다.
+#### any는 타입 설계를 감춰버립니다
 상태 객체 안에 있는 수많은 속성의 타입을 일일이 작성해야 하는데, any 타입을 사용하면 간단히 끝내버릴 수 있습니다.
 
 **하지만, 이때 any를 사용하면 안됩니다.**
@@ -281,7 +280,7 @@ interface ComponentProps {
 상태 객체의 설계를 감춰버리기 때문입니다. 
 > 깔끔하고 정확하고 명료한 코드 작성을 위해 제대로 된 타입 설계는 필수입니다.
 
-#### any는 타입시스템의 신뢰도를 떨어뜨립니다.
+#### any는 타입시스템의 신뢰도를 떨어뜨립니다
 사람은 항상 실수를 합니다. 보통은 타입 체커가 실수를 잡아주고 코드의 신뢰도가 높아집니다.
 
 그러나 런타임에 타입 오류를 발견하게 된다면 타입 체커를 신뢰할 수 없을 겁니다.
@@ -349,7 +348,7 @@ function getKey<K extends string>(val: any, key: K) {
 getKey({}, 'x'); // 정상
 getKey({}, Math.random() < 0.5 ? 'a' : 'b'); // 정상
 getKey({}, document.title); // 정상
-getKey({}, 12); // Argument of type 'number' is not assignable to parameter of type 'string'.
+getKey({}, 12); // error: Argument of type 'number' is not assignable to parameter of type 'string'.
 ```
 ```typescript
 interface Point {
@@ -387,7 +386,7 @@ function email(p: Person, subject: string, body: string): Response {
   // ...
 }
 type T1 = typeof p; // 타입은 Person
-type T2 = typeof email; // (p: Person, subject: string, body: string) => Response
+type T2 = typeof email; // 타입은 (p: Person, subject: string, body: string) => Response
 const v1 = typeof p; // 값은 'object'
 const v2 = typeof email; // 값은 function
 ```
@@ -694,6 +693,9 @@ type TopNavState = {
 // Pick을 이용
 type TopNavState = Pick<State, 'userId' | 'pageTitle' | 'recentFiles'>;
 ```
+<br>
+
+**ActionType을 정의하는 법**
 
 ```typescript
 interface SaveAction {
@@ -2789,4 +2791,109 @@ number 타입에 상표를 붙여도 산술연산 후에는 상표가 없어지�
 > 
 > 상표 기법은 타입 시스템에서 동작하지만 런타임에 상표를 검사하는 것과 동일한 효과를 얻을 수 있습니다.
 
+
+## 5. any 다루기
+전통적으로 프로그래밍 언어들의 타입 시스템은 완전히 정적이거나 완전히 동적으로 확실히 구분되어 있었습니다.
+
+그러나 타입스크립트의 타입 시스템은 선택적(optional)이고 점진적(gradual)이기 때문에 정적이면서도 동적인 특성을 동시에 가집니다.
+
+- 따라서 타입스크립트는 프로그램의 일부분에만 타입 시스템을 적용할 수 있습니다.
+
+프로그램의 일부분에만 타입 시스템을 적용할 수 있다는 특성 덕분에 점진적인 마이그레이션(자바스크립트 코드를 타입스크립트로 전환)이 가능합니다([아이템 8](#아이템-8-타입-공간과-값-공간의-심벌-구분하기)).
+
+마이그레이션을 할 때 코드의 일부분에 타입 체크를 비활성화시켜주는 any 타입이 중요한 역할을 합니다.
+
+또한 any를 현명하게 사용하는 방법을 익혀야만 효과적인 타입스크립트 코드를 작성할 수 있습니다.
+
+
+### 아이템 38. any 타입은 가능한 한 좁은 범위에서만 사용하기
+
+```typescript
+interface Foo { foo: string; }
+interface Bar { bar: string; }
+declare function expressionReturningFoo(): Foo;
+function processBar(b: Bar) { /* ... */ }
+
+function f() {
+  const x = expressionReturningFoo();
+  processBar(x); // error:
+// Argument of type 'Foo' is not assignable to parameter of type 'Bar'.
+// Property 'bar' is missing in type 'Foo' but required in type 'Bar'.
+}
+```
+
+문맥상으로 x라는 변수가 동시에 Foo 타입과 Bar 타입에 할당 가능하다면, 오류를 제거하는 방법은 두 가지입니다.
+
+```typescript
+function f1() {
+  const x: any = expressionReturningFoo();  // 이렇게 하지 맙시다.
+  processBar(x);
+}
+
+function f2() {
+  const x = expressionReturningFoo();
+  processBar(x as any);  // 이게 낫습니다.
+}
+```
+두 가지 해결책 중에서 f1에 사용된 x: any보다 f2에 사용된 x as any 형태가 권장됩니다.
+
+그 이유는 any 타입이 processBar 함수의 매개변수에서만 사용된 표현식이므로 다른 코드에는 영향을 미치지 않기 때문입니다.
+
+f1에서는 함수의 마지막까지 x의 타입이 any인 반면, f2에서는 processBar 호출 이후에 x가 그대로 Foo 타입입니다.
+
+**만일 f1 함수가 x를 반환한다면**
+```typescript
+function f1() {
+  const x: any = expressionReturningFoo();
+  processBar(x);
+  return x;
+}
+
+function g() {
+  const foo = f1();  // 타입은 any
+  foo.fooMethod();  // 이 함수 호출은 체크되지 않습니다.
+}
+```
+
+#### 객체와 관련한 any의 사용법
+
+```typescript
+interface Config {
+  a: number;
+  b: number;
+  c: {
+    key: Foo;
+  };
+}
+declare const value: Bar;
+const config: Config = {
+  a: 1,
+  b: 2,
+  c: {
+    key: value
+ // Property 'foo' is missing in type 'Bar' but required in type 'Foo'.
+  }
+};
+```
+
+단순히 생각하면 config 객체 전체를 as any로 선언해서 오류를 제거할 수 있습니다.
+```typescript
+const config: Config = {
+  a: 1,
+  b: 2,
+  c: {
+    key: value
+  }
+} as any;  // 이렇게 하지 맙시다!
+
+const config: Config = {
+  a: 1,
+  b: 2,  // 이 속성은 여전히 체크 됩니다.
+  c: {
+    key: value as any
+  }
+};
+```
+
+> 의도치 않은 타입 안정성의 손실을 피하기 위해서 any의 사용 범위를 최소한으로 좁혀야 합니다.
 
