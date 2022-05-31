@@ -3261,3 +3261,89 @@ unknown 타입이 도입되기 전에는 {}가 더 일반적으로 사용되었�
 > 
 > 사용자가 타입 단언문이나 타입 체크를 사용하도록 강제하려면 unknown을 사용하면 됩니다.
 
+
+### 아이템 43. 몽키 패치보다는 안전한 타입을 사용하기
+
+자바스크립트의 가장 유명한 특징 중 하나는, 객체와 클래스에 임의의 속성을 추가할 수 있을 만큼 유연하다는 것입니다.
+
+객체에 속성을 추가할 수 있는 기능은 종종 웹 페이지에서 window나 document에 값을 할당하여 전역 변수를 만드는 데 사용됩니다.
+
+```javascript
+window.monkey = 'Howler';
+document.monkey = 'Tamarin';
+
+const el = document.getElementById('colobus');
+el.home = 'tree';
+
+> RegExp.prototype.monkey = 'Capuchin';
+"Capuchin"
+> /123/.monkey
+"Capuchin"
+```
+
+객체에 임의의 속성을 추가하는 것은 일반적으로 좋은 설계가 아닙니다.
+
+타입스크립트까지 더하면 또 다른 문제가 발생합니다.
+```typescript
+document.monkey = 'Tamarin';
+// Property 'monkey' does not exist on type 'Document'.
+
+// 오류 해결: any 단언문
+(document as any).monkey = 'Tamarin';  // 정상
+
+(document as any).monky = 'Tamarin';  // 정상, 하지만 오타
+(document as any).monkey = /Tamarin/;  // 정상, 하지만 잘못된 타입
+```
+
+최선의 해결책은 document 또는 DOM으로부터 데이터를 분리하는 것입니다.
+
+분리할 수 없는 경우(객체와 데이터가 붙어 있어야만 하는 라이브러리를 사용주이거나 자바스크립트 애플리케이션을 마이그레이션하는 과정 중이라면), 두 가지 차선책이 존재합니다.
+
+- 첫 번째 interface이 특수 기능 중 하나인 보강(augmentation)을 사용하는 것입니다([아이템 13](#아이템-13-타입과-인터페이스의-차이점-알기)).
+
+```typescript
+interface Document {
+  /** 몽키 패치의 속(genus) 또는 종(species) */
+  monkey: string;
+}
+document.monkey = 'Tamarin';  // 정상
+```
+보강을 사용한 방법이 any보다 나은 점은 다음과 같습니다.
+
+- 타입이 더 안전합니다. 타입 체커는 오타나 잘못된 타입의 할당을 오류로 표시합니다.
+- 속성에 주석을 붙일 수 있습니다(아이템 48).
+- 속성에 자동완성을 사용할 수 있습니다.
+- 몽키 패치가 어떤 부분에 적용되었는지 정확한 기록이 남습니다.
+
+그리고 모듈의 관점에서(타입스크립트 파일이 import / export를 사용하는 경우), 제대로 동작하게 하려면 global 선언을 추가해야 합니다.
+
+```typescript
+export {};
+declare global {
+  interface Document {
+    /** 몽키 패치의 속(genus) 또는 종(species) */
+    monkey: string;
+  }
+}
+document.monkey = 'Tamarin';  // 정상
+```
+보강을 사용할 때 주의해야 할 점은 모듈 영역(scope)과 관련이 있습니다.
+
+보강은 전역적으로 적용되기 때문에, 코드의 다른 부분이나 라이브러리로부터 분리할 수 없습니다.
+
+- 두 번째 더 구체적인 타입 단언문을 사용하는 것입니다.
+
+```typescript
+interface MonkeyDocument extends Document {
+  /** 몽키 패치의 속(genus) 또는 종(species) */
+  monkey: string;
+}
+(document as MonkeyDocument).monkey = 'Macaque';
+```
+
+MonkeyDocument는 Document를 확장하기 때문에([아이템 9](#아이템-9-타입-단언보다는-타입-선언을-사용하기)) 타입 단언문은 정상이며 할당문의 타입은 안전합니다.
+
+또한 Document 타입을 건드리지 않고 별도로 확장하는 새로운 타입을 도입했기 때문에 모듈 영역 문제도 해결할 수 있습니다(import하는 곳의 영역에만 해당됨).
+
+그러나 몽키패치를 남용해서는 안 되며 궁극적으로 더 잘 설계된 구조로 리팩터링하는 것이 좋습니다.
+
