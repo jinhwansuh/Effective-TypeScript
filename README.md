@@ -3020,3 +3020,88 @@ function cacheLast<T extends Function>(fn: T): T {
 > 타입 선언문은 일반적으로 타입을 위험하게 만들지만 상황에 따라 필요하기도 하고 현실적인 해결책이 되기도 합니다.
 > 
 > 불가피하게 사용해야 한다면, 정확한 정의를 가지는 함수 안으로 숨기도록 합니다.
+
+### 아이템 41. any의 진화를 이해하기
+
+타입스크립트에서 일반적으로 변수의 타입은 변수를 선언할 때 결정됩니다.
+
+그 후에 정제될 수 있지만(예를 들어 null인지 체크해서), 새로운 값이 추가되도록 확장할 수는 없습니다.
+
+그러나 any 타입과 관련해서 예외인 경우가 존재 합니다.
+
+일정 범위의 숫자들을 생성하는 함수를 예로 들어 보겠습니다.
+
+```typescript
+function range(start: number, limit: number) {
+  const out = []; // out의 타입은 any[]로 추론됨.
+  for (let i = start; i < limit; i++) {
+    out.push(i); // out의 타입이 any[]
+  }
+  return out;  // 반환 타입이 number[]로 추론됨.
+}
+```
+처음에는 any 타입 배열인 []로 초기화되었는데, 마지막에는 number[]로 추론되고 있습니다.
+
+out의 타입은 any[]로 선언되었지만 number 타입의 값을 넣는 순간부터 타입은 number[]로 진화(evolve)합니다.
+
+타입의 진화는 타입 좁히기([아이템 22](#아이템-22-타입-좁히기))와 다릅니다.
+
+<br>
+
+#### 배열에 다양한 타입의 요소를 넣으면 배열의 타입이 확장되며 진화합니다.
+
+```typescript
+const result = [];  // 타입은 any[]
+result.push('a');
+result  // 타입은 string[]
+result.push(1);
+result  // 타입은 (string | number)[]
+```
+
+또한 조건문에서는 분기에 따라 타입이 변할 수도 있습니다.
+```typescript
+let val;  // 타입은 any
+if (Math.random() < 0.5) {
+  val = /hello/;
+  val  // 타입은 RegExp
+} else {
+  val = 12;
+  val  // 타입은 number
+}
+val  // 타입은 number | RegExp
+```
+
+변수의 초깃값이 null인 경우도 any의 진화가 일어납니다.
+
+보통은 try/catch 블록 안에서 변수를 할당하는 경우에 나타납니다.
+
+```typescript
+function somethingDangerous() {}
+let val = null;  // 타입은 any
+try {
+  somethingDangerous();
+  val = 12;
+  val  // 타입은 number
+} catch (e) {
+  console.warn('alas!');
+}
+val  // 타입은 number | null
+```
+
+다음처럼 명시적으로 any를 선언하면 타입이 그대로 유지됩니다.
+```typescript
+let val: any;  // 타입은 any
+if (Math.random() < 0.5) {
+  val = /hello/;
+  val  // 타입은 any
+} else {
+  val = 12;
+  val  // 타입은 any
+}
+val  // 타입은 any
+```
+
+> 일반적인 타입들은 정제되기만 하는 반면, 암시적 any와 any[] 타입은 진화 할 수 있습니다. 이러한 동작이 발생하는 코드를 인지하고 이해할 수 있어야 합니다.
+> 
+> any를 진화시키는 방식보다 명시적 타입 구문을 사용하는 것이 안전한 타입을 유지하는 방법입니다.
+
