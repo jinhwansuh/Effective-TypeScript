@@ -2897,3 +2897,69 @@ const config: Config = {
 
 > 의도치 않은 타입 안정성의 손실을 피하기 위해서 any의 사용 범위를 최소한으로 좁혀야 합니다.
 
+### 아이템 39. any를 구체적으로 변형해서 사용하기
+
+any는 자바스크립트에서 표현할 수 있는 모든 값을 아우르는 매우 큰 범위의 타입입니다.
+
+any 타입에는 모든 숫자, 문자열, 배열, 객체, 정규식, 함수, 클래스, DOM 앨리먼트는 물론 null과 undefined까지도 포함됩니다.
+
+반대로 말하면, 일반적인 상황에서는 any보다 더 구체적으로 표현할 수 있는 타입이 존재하 가능성이 높기 때문에 더 구체적인 타입을 찾아 타입 안정성을 높이도록 해야 합니다.
+
+예를 들어, any 타입의 값을 그대로 정규시이나 함수에 넣는 것은 권장되지 않습니다.
+
+**getLength가 더 좋은 함수입니다**
+```typescript
+function getLengthBad(array: any) {  // 이렇게 하지 맙시다.
+  return array.length;
+}
+function getLength(array: any[]) {
+  return array.length;
+}
+```
+이유 세 가지
+- 함수 내의 array.length 타입이 체크됩니다.
+- 함수의 반환 타입이 any 대신 number로 추론됩니다.
+- 함수 호출될 때 매개변수가 배열인지 체크됩니다.
+
+배열이 아닌 값을 넣어서 실행해 보면, getLength는 제대로 오류를 표시하지만 getLengthBad는 오류를 잡아내지 못하는 것을 볼 수 있습니다.
+
+```typescript
+getLengthBad(/123/);  // 정상, 오류 없음, undefined를 반환합니다.
+getLength(/123/); // error: 
+// Argument of type 'RegExp' is not assignable to parameter of type 'any[]'.
+```
+
+함수의 매개변수를 구체화할 때, (요소의 타입에 관계없이) 배열의 배열 형태라면 any[][]처럼 선언하면 됩니다.
+
+그리고 함수의 매개변수가 객체이긴 하지만 값을 알 수 없다면 {[key: string]: any}처럼 선언하면 됩니다.
+
+```typescript
+function hasTwelveLetterKey(o: {[key: string]: any}) {
+  for (const key in o) {
+    if (key.length === 12) {
+      return true;
+    }
+  }
+  return false;
+}
+```
+
+<br>
+
+```typescript
+type Fn0 = () => any;  // 매개변수 없이 호출 가능한 모든 함수
+type Fn1 = (arg: any) => any;  // 매개변수 1개
+type FnN = (...args: any[]) => any;  // 모든 개수의 매개변수 "Function" 타입과 동일합니다.
+```
+
+```typescript
+const numArgsBad = (...args: any) => args.length; // any를 반환합니다.
+const numArgsGood = (...args: any[]) => args.length;  // number를 반환합니다.
+```
+
+> any를 사용할 때는 정말로 모든 값이 허용되어야만 하는지 면밀히 검토해야합니다.
+> 
+> any보다 더 정확하게 모델링할 수 있도록 any[] 또는 `{[id: string]: any}` 또는 () => any처럼 구체적인 형태를 사용해야 합니다.
+
+
+
