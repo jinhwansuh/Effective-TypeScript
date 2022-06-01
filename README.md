@@ -3693,3 +3693,50 @@ type MyName = Parameters<typeof getGift>[0];  // SecretName
 
 > 공개 매서드에 등장한 어떤 형태의 타입이든 익스포트합시다. 어차피 라이브러리 사용자가 추출할 수 있으므로, 익스포트하기 쉽게 만드는 것이 좋습니다.
 
+
+### 아이템 48. API 주석에 TSDoc 사용하기
+
+다음 코드는 인사말을 생성하는 타입스크립트 함수입니다.
+
+```typescript
+// 인사말을 생성합니다. 결과는 보기 좋게 꾸며집니다.
+function greet(name: string, title: string) {
+  return `Hello ${title} ${name}`;
+} // 인라인 주석은 툴팁이 안나옵니다.
+
+/** 인사말을 생성합니다. 결과는 보기 좋게 꾸며집니다. */
+function greetJSDoc(name: string, title: string) {
+  return `Hello ${title} ${name}`;
+}
+```
+
+JSDoc에는 @param과 @returns 같은 일반적 규칙을 사용할 수 있습니다.
+
+```typescript
+/**
+ * 인사말을 생성합니다.
+ * @param name 인사할 사람의 이름
+ * @param salutation 그 사람의 칭호
+ * @returns 사람이 보기 좋은 형태의 인사말
+ */
+function greetFullTSDoc(name: string, title: string) {
+  return `Hello ${title} ${name}`;
+}
+```
+
+타입 정의에 TSDoc을 사용할 수도 있습니다.
+
+```typescript
+/** 특정 시간과 장소에서 수행된 측정 */
+interface Measurement {
+  /** 어디에서 측정되었나? */
+  position: Vector3D;
+  /** 언제 측정되었나? epoch에서부터 초 단위로 */
+  time: number;
+  /** 측정된 운동량 */
+  momentum: Vector3D;
+}
+```
+Measurement 객체의 각 필드에 마우스를 올려 보면 필드별로 설명을 볼 수 있습니다.
+
+> 익스포트된 함수, 클래스, 타입에 주석을 달 때는 JSDoc/TSDoc 형태를 사용합시다.
