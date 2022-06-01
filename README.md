@@ -3657,3 +3657,39 @@ DefinitelyTyped는 커뮤니티에서 관리되기 때문에 이러한 작업량
 타입스크립트에서 의존성을 관리한다는 것은 쉽지 않은 일이지만, 잘 관리 한다면 그에 따른 보상이 함께 존재합니다.
 
 잘 작성된 타입 선언은 라이브러리를 올바르게 사용하는 방법을 배우는 데 도움이 되며 생산성 역시 크게 향상시킬 수 있습니다.
+
+
+### 아이템 47. 공개 API에 등장하는 모든 타입을 익스포트하기
+
+타입스크립트를 사용하다 보면, 언젠가는 서드파티의 모듈에서 익스포트되지 않은 타입 정보가 필요한 경우가 있습니다.
+
+만약 함수의 선언에 이미 타입 정보가 있다면 제대로 익스포트되고 있는 것이며, 타입 정보가 없다면 타입을 명시적으로 작성해야 합니다.
+
+어떤 타입을 숨기고 싶어서 익스포트하지 않았다고 가정해 보겠습니다.
+
+```typescript
+interface SecretName {
+  first: string;
+  last: string;
+}
+
+interface SecretSanta {
+  name: SecretName;
+  gift: string;
+}
+
+export function getGift(name: SecretName, gift: string): SecretSanta {
+  // ...
+}
+```
+
+해당 라이브러리 사용자는 SecretName 또는 SecretSanta를 직접 임포트할 수 없고, getGift만 임포트 가능합니다.
+
+추출하는 한 가지 방법은 Parameters와 ReturnType 제너릭 타입을 사용하는 것입니다.
+```typescript
+type MySanta = ReturnType<typeof getGift>;  // SecretSanta
+type MyName = Parameters<typeof getGift>[0];  // SecretName
+```
+
+> 공개 매서드에 등장한 어떤 형태의 타입이든 익스포트합시다. 어차피 라이브러리 사용자가 추출할 수 있으므로, 익스포트하기 쉽게 만드는 것이 좋습니다.
+
