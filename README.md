@@ -3855,3 +3855,40 @@ function f(x: number|string) {
 ```
 
 > 오버로딩 타입보다 조건부 타입을 사용하는 것이 좋습니다. 조건부 타입은 추가적인 오버로딩 없이 유니온 타입을 지원할 수 있습니다. 
+
+
+### 아이템 51. 의존성 분리를 위해 미러 타입 사용하기
+
+CSV 파일을 파싱하는 라이브러리를 작성한다고 가정해 보겠습니다.
+
+CSV 파일의 내용을 매개변수로 받고, 열 이름을 값으로 매핑하는 객체들을 생성하여 배열로 반환합니다. 그리고 NodeJS 사용자를 위해 매개변수에 Buffer 타입을 허용합니다.
+
+```typescript
+function parseCSV(contents: string | Buffer): {[column: string]: string}[]  {
+  if (typeof contents === 'object') {
+    // It's a buffer
+    return parseCSV(contents.toString('utf8'));
+  }
+  // ...
+}
+```
+
+이때 Buffer의 타입 정의는 NodeJs 타입 선언을 설치해서 얻을 수 있습니다. `npm install --save-dev @types/node`
+
+그러나 @types/node를 devDependencies로 포함하면 두 그룹의 라이브러리 사용자들에게 문제가 생깁니다.
+
+- @types와 무관한 자바스크립트 개발자
+- NodeJs와 무관한 타입스크립트 웹 개발자
+
+
+그래서 실제로 필요한 부분만을 떼어 내어 명시해, 의존성을 분리할 때가 좋을 수 있습니다.
+
+```typescript
+interface CsvBuffer {
+  toString(encoding: string): string;
+}
+function parseCSV(contents: string | CsvBuffer): {[column: string]: string}[]  {
+  // ...
+}
+```
+
