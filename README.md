@@ -3892,3 +3892,75 @@ function parseCSV(contents: string | CsvBuffer): {[column: string]: string}[]  {
 }
 ```
 
+### 아이템 52. 테스팅 타입의 함정에 주의하기
+
+테스팅을 위해 할당을 사용하는 방법에는 두 가지 근본적인 문제가 있습니다.
+
+1. 불필요한 변수를 만들어야 합니다.
+
+반환값을 할당하는 변수는 샘플코드처럼 쓰일 수도 있지만, 일부 린팅 규칭(미사용 변수 경고)을 비활성해야합니다.
+
+일반적인 해결책은 변수를 도입하는 대신 헬퍼 함수를 정의하는 것입니다.
+
+```typescript
+function assertType<T>(x: T) {}
+
+assertType<number[]>(map(['john', 'paul'], name => name.length));
+```
+
+이 코드는 불필요한 변수 문제를 해결하지만, 또 다른 문제점이 남아 있습니다.
+
+2. 두 타입이 동일한지 체크하는 것이 아니라 할당 가능성을 체크하고 있습니다.
+
+```typescript
+const n = 12;
+assertType<number>(n);  // 정상
+```
+
+그러나 객체의 타입을 체크하는 경우를 살펴보면 문제를 발견하게 될 겁니다.
+
+```typescript
+const beatles = ['john', 'paul', 'george', 'ringo'];
+assertType<{name: string}[]>(
+  map(beatles, name => ({
+    name,
+    inYellowSubmarine: name === 'ringo'
+  })));  // 정상
+```
+
+map은 {name: string, inYellowSubmarine: boolean} 객체의 배열을 반환합니다.
+
+반환된 배열은 {name: string}[]에 할당 가능하지만, inYellowSubmarine 속성에 대한 부분이 체크되지 않았습니다.
+
+게다가 assertType에 함수를 넣어보면, 이상한 결과가 나타납니다.
+
+```typescript
+function assertType<T>(x: T) {}
+const add = (a: number, b: number) => a + b;
+assertType<(a: number, b: number) => number>(add);  // 정상
+
+const double = (x: number) => 2 * x;
+assertType<(a: number, b: number) => number>(double);  // 정상!?
+```
+
+double 함수의 체크가 성공하는 이유는, 타입스크립트의 함수는 매개변수가 더 적은 함수 타입에 할당 가능하기 때문입니다.
+
+```typescript
+const g: (x: string) => any = () => 12;  // 정상
+```
+
+앞의 코드는 선언된 것보다 적은 매개변수를 가진 함수를 할당하는 것이 아무런 문제가 없다는 것을 보여 줍니다.
+
+<br>
+
+다음 코드처럼 assertType을 Parameters와 ReturnType 제너릭 타입을 이용해 함수의 매개변수 타입과 반환 타입만 분리하여 테스트할 수 있습니다.
+
+```typescript
+const double = (x: number) => 2 * x;
+let p: Parameters<typeof double> = null!;
+assertType<[number, number]>(p);
+// Argument of type '[number]' is not assignable to parameter of type [number, number]
+let r: ReturnType<typeof double> = null!;
+assertType<number>(r);  // 정상
+```
+
