@@ -3740,3 +3740,53 @@ interface Measurement {
 Measurement 객체의 각 필드에 마우스를 올려 보면 필드별로 설명을 볼 수 있습니다.
 
 > 익스포트된 함수, 클래스, 타입에 주석을 달 때는 JSDoc/TSDoc 형태를 사용합시다.
+
+### 아이템 49. 콜백에서 this에 대한 타입 제공하기
+
+자바스크립트에서 this 키워드는 매우 혼란스러운 기능입니다.
+
+let이나 const로 선언된 변수가 렉시컬 스코프(lexical scope)인 반면, this는 다이나믹 스코프(dynamic scope)입니다.
+
+다이나믹 스코프의 값은 '정의된'방식이 아니라 '호출된'방식에 따라 달라집니다.
+
+this는 전형적으로 객체의 현재 인스턴스를 참조하는 클래스에서 가장 많이 쓰입니다.
+
+```javascript
+class C {
+  vals = [1, 2, 3];
+  logSquares() {
+    for (const val of this.vals) {
+      console.log(val * val);
+    }
+  }
+}
+const c = new C();
+c.logSquares();
+// 1
+// 4
+// 9
+```
+
+```typescript
+class C {
+  vals = [1, 2, 3];
+  logSquares() {
+    for (const val of this.vals) {
+      console.log(val * val);
+    }
+  }
+}
+const c = new C();
+const method = c.logSquares;
+method(); // 런타임에 오류가 발생합니다.
+
+// TypeError: Cannot read property 'vals' of undefined
+```
+
+call을 사용하면 명시적으로 this를 바인딩하여 문제를 해결할 수 있습니다.
+```typescript
+const c = new C();
+const method = c.logSquares;
+method.call(c);  // 제곱을 출력합니다.
+```
+
