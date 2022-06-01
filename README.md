@@ -3790,3 +3790,68 @@ const method = c.logSquares;
 method.call(c);  // 제곱을 출력합니다.
 ```
 
+### 아이템 50. 오버로딩 타입보다는 조건부 타입을 사용하기
+
+다음 예제의 double 함수에 타입 정보를 추가해 보겠습니다.
+
+```typescript
+function double(x) { return x + x };
+
+function double(x: number|string): number|string;
+function double(x: any) { return x + x; }
+```
+선언이 틀린 것은 아니지만, 모호한 부분이 있습니다.
+
+```typescript
+const num = double(12);  // string | number
+const str = double('x');  // string | number
+```
+
+제너릭을 사용하면 이러한 동작을 모델링할 수 있습니다.
+```typescript
+function double<T extends number|string>(x: T): T;
+function double(x: any) { return x + x; }
+
+const num = double(12);  // 타입이 12
+const str = double('x');  // 타입이 "x"
+```
+
+하지만 너무 과했습니다.
+
+또 다른 방법은 여러 가지 타입 선언으로 분리하는 것입니다.
+```typescript
+function double(x: number): number;
+function double(x: string): string;
+function double(x: any) { return x + x; }
+
+const num = double(12);  // 타입이 number
+const str = double('x');  // 타입이 string
+```
+
+함수 타입이 조금 명확해졌지만 여전히 버그는 남아 있습니다.
+
+```typescript
+function f(x: number|string) {
+  return double(x); // error:
+// Argument of type 'string | number' is not assignable to parameter of type 'string'
+}
+```
+
+다음 오버로딩(string|number 타입)을 추가하여 문제를 해결할 수도 있지만, 가장 좋은 해결책은 조건부 타입(conditional type)을 사용하는 것입니다.
+
+```typescript
+function double<T extends number | string>(
+  x: T
+): T extends string ? string : number;
+function double(x: any) { return x + x; }
+
+const num = double(12);  // number
+const str = double('x');  // string
+
+// function f(x: string | number): string | number
+function f(x: number|string) {
+  return double(x);
+}
+```
+
+> 오버로딩 타입보다 조건부 타입을 사용하는 것이 좋습니다. 조건부 타입은 추가적인 오버로딩 없이 유니온 타입을 지원할 수 있습니다. 
