@@ -4270,3 +4270,154 @@ function foo(abc: ABC) {
 객체를 순회할 때, 키가 어떤 타입인지 정확히 파악하고 있다면 let k: keyof T와 for-in 루프를 사용합니다.
 
 함수의 매개변수로 쓰이는 객체에는 추가적인 키가 존재할 수 있다는 점을 명심합시다.
+
+### 아이템 55. DOM 계층 구조 이해하기
+
+DOM 계층은 웹브라우저에서 자바스크립트를 실행할 때 어디에서나 존재합니다.
+
+엘리먼트를 얻기 위해 document.getElementById를 사용할 때나 엘리먼트를 생성하기 위해 document.createElement를 사용할 때, 두 개의 차이가 무엇인지 모르더라도 결과가 어떠한 엘리먼트라는 것은 분명합니다.
+
+그리고 많은 부분에서 엘리먼트의 DOM과 관련된 메서드를 사용하고 엘리먼트의 속성을 사용하게 됩니다.
+
+다음은 언뜻 보기에 문제가 없는 자바스크립트 코드입니다.
+
+```javascript
+function handleDrag(eDown: Event) {
+  const targetEl = eDown.currentTarget;
+  targetEl.classList.add('dragging');
+  const dragStart = [eDown.clientX, eDown.clientY];
+  const handleUp = (eUp: Event) => {
+    targetEl.classList.remove('dragging');
+    targetEl.removeEventListener('mouseup', handleUp);
+    const dragEnd = [eUp.clientX, eUp.clientY];
+    console.log('dx, dy = ', [0, 1].map(i => dragEnd[i] - dragStart[i]));
+  }
+  targetEl.addEventListener('mouseup', handleUp);
+}
+
+   const div = document.getElementById('surface');
+   div.addEventListener('mousedown', handleDrag);
+```
+
+하지만 타입스크립트에서는 수많은 오류가 표시됩니다.
+
+```typescript
+function handleDrag(eDown: Event) {
+  const targetEl = eDown.currentTarget;
+  targetEl.classList.add('dragging'); // error:
+// Property 'classList' does not exist on type 'EventTarget'.
+  const dragStart = [eDown.clientX, eDown.clientY]; // error:
+// Property 'clientX' does not exist on type 'Event'.
+// Property 'clientY' does not exist on type 'Event'.
+  const handleUp = (eUp: Event) => {
+    targetEl.classList.remove('dragging'); // error:
+// Property 'classList' does not exist on type 'EventTarget'.
+    targetEl.removeEventListener('mouseup', handleUp);
+    const dragEnd = [eUp.clientX, eUp.clientY]; // error:
+// Property 'clientX' does not exist on type 'Event'.
+// Property 'clientY' does not exist on type 'Event'.
+    console.log('dx, dy = ', [0, 1].map(i => dragEnd[i] - dragStart[i]));
+  }
+  targetEl.addEventListener('mouseup', handleUp); // error:
+// ~~~~~~~ Object is possibly 'null'
+}
+
+   const div = document.getElementById('surface');
+   div.addEventListener('mousedown', handleDrag); // error:
+// ~~~ Object is possibly 'null'
+```
+
+<br>
+
+EventTarget 오류를 이해하려면 DOM 계층 구조로 자세히 살펴봐야 합니다.
+
+다음 HTML 코드를 보겠습니다.
+
+```javascript
+<p id="quote">and <i>yet</i> it moves</p>
+
+const p = document.getElementsByTagName('p')[0];
+p instanceof HTMLParagraphElement // 참(true)
+```
+
+HTMLParagraphElement는 HTMLElement의 서브타입이고, HTMLElement는 Element의 서브타입입니다.
+
+또한 Element는 Node 서브타입이고, Node는 EventTarget의 서브타입입니다.
+
+다음은 계층 구조에 따른 타입의 몇 가지 예시입니다.
+
+1. EventTarget은 DOM 타입 중 가장 추상화된 타입입니다.
+
+이벤트 리스너를 추가하거나 제거하고, 이벤트를 보내는 것밖에 할 수 없습니다.
+
+```typescript
+function handleDrag(eDown: Event) {
+  const targetEl = eDown.currentTarget;
+  targetEl.classList.add('dragging'); // error:
+//  Object is possibly 'null'
+// Property 'classList' does not exist on type 'EventTarget'.
+  // ...
+}
+```
+
+2. Node 타입을 알아보겠습니다.
+
+Element가 아닌 Node인 경우를 몇 가지 예로 들어 보면 텍스트 조각고 주석이 있습니다.
+
+```javascript
+<p>
+  And <i>yet</i> it moves
+  <!-- quote from Galileo -->
+</p>
+
+p.children // HTMLCollection [i]
+p.childNodes // NodeList(5) [text, i, text, comment, text]
+```
+
+3. Element와 HTMLElement를 알아보겠습니다.
+
+SVG 태그의 전체 계층 구조를 포함하면서 HTML이 아닌 엘리먼트가 존재하는데, 바로 Element의 또 다른 종류인 SVGElement입니다.
+
+예를 들어, \<html>은 HTMLHtmlElement이고 \<svg>는 SVGSvgElement입니다.
+
+4. HTMLxxxElement를 알아보겠습니다.
+
+HTMLxxxElement 형태의 특정 엘리먼트들은 자신만의 고유한 속성을 가지고 있습니다.
+
+예를 들어, HTMLImageElement에는 src 속성이 있고, HTMLInputElement에는 value 속성이 있습니다.
+
+```typescript
+document.getElementsByTagName('p')[0];  // HTMLParagraphElement
+document.createElement('button');  // HTMLButtonElement
+document.querySelector('div');  // HTMLDivElement
+```
+
+일반적으로 타입 단언문은 지양해야 하지만 DOM 관련해서는 타입스크립트보다 우리가 더 정확히 알고 있는 경우이므로 단언문을 사용해도 좋습니다.
+
+```typescript
+document.getElementById('my-div');  // HTMLElement
+
+document.getElementById('my-div') as HTMLDivElement;
+```
+
+그래서 처음 예시를 들었던 코드를 DOm에 대한 타입 추론을 이용해 문맥 정보를 폭넓게 활용해야 합니다.
+
+```typescript
+function addDragHandler(el: HTMLElement) {
+  el.addEventListener('mousedown', eDown => {
+    const dragStart = [eDown.clientX, eDown.clientY];
+    const handleUp = (eUp: MouseEvent) => {
+      el.classList.remove('dragging');
+      el.removeEventListener('mouseup', handleUp);
+      const dragEnd = [eUp.clientX, eUp.clientY];
+      console.log('dx, dy = ', [0, 1].map(i => dragEnd[i] - dragStart[i]));
+    }
+    el.addEventListener('mouseup', handleUp);
+  });
+}
+
+const div = document.getElementById('surface');
+if (div) {
+  addDragHandler(div);
+}
+```
