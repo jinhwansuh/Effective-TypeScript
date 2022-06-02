@@ -4421,3 +4421,100 @@ if (div) {
   addDragHandler(div);
 }
 ```
+
+### 아이템 56. 정보를 감추는 목적으로 private 사용하지 않기
+
+자바스크립트는 클래스에 비공개 속성을 만들 수 없습니다.
+
+많은 이가 비공개 속성임을 나타내기 위해 언더스코어(_)를 접두사로 붙이던 것이 관례로 인정될 뿐이었습니다.
+
+```javascript
+class Foo {
+  _private = 'secret123';
+}
+const f = new Foo();
+f._private; // 'secret123'
+```
+
+타입스크립트에는 public, protected, private 접근 제어자를 사용해서 공개 규칙을 강제할 수 있는 것으로 오해할 수 있습니다.
+
+```typescript
+class Diary {
+  private secret = 'cheated on my English test';
+}
+
+const diary = new Diary();
+diary.secret // error:
+// Property 'secret' is private and only accessible within class 'Diary'.
+
+// 이 코드를 컴파일하면 
+class Diary {
+  constructor() {
+    this.secret = 'cheated on my English test';
+  }
+}
+const diary = new Diary();
+diary.secret;
+```
+private 키워드는 사라졌고 secret은 일반적인 속성이므로 접근할 수 있습니다.
+
+타입스크립트의 접근 제어자들은 단지 컴파일 시점에만 오류를 표시해 줄 뿐이며, 언더스코어 관례와 마찬가지로 런타임에는 아무런 효력이 없습니다.
+
+심지어 단언문을 사용하면 타입스크립트 상태에서도 private 속성에 접근할 수 있습니다.
+
+```typescript
+class Diary {
+  private secret = 'cheated on my English test';
+}
+
+const diary = new Diary();
+(diary as any).secret  // OK
+```
+
+즉, 정보를 감추기 위해 private을 사용하면 안 됩니다.
+
+<br>
+
+자바스크립트에서 정보를 숨기기 위해 가장 효과적인 방법은 클로저(closure)를 사용하는 것입니다.
+
+```typescript
+declare function hash(text: string): number;
+
+class PasswordChecker {
+  checkPassword: (password: string) => boolean;
+  constructor(passwordHash: number) {
+    this.checkPassword = (password: string) => {
+      return hash(password) === passwordHash;
+    }
+  }
+}
+
+const checker = new PasswordChecker(hash('s3cret'));
+checker.checkPassword('s3cret');  // 결과는 true
+```
+
+또 하나의 선택지로, 현재 표준화가 진행 중인 비공개 필드 기능을 사용할 수도 있습니다.
+
+비공개 필드 기능은 접두사로 #를 붙여서 타입 체크와 런타임 모두에서 비공개로 만든느 역할을 합니다.
+
+```typescript
+class PasswordChecker {
+  #passwordHash: number;
+
+  constructor(passwordHash: number) {
+    this.#passwordHash = passwordHash;
+  }
+
+  checkPassword(password: string) {
+    return hash(password) === this.#passwordHash;
+  }
+}
+
+const checker = new PasswordChecker(hash('s3cret'));
+checker.checkPassword('secret');  // 결과는 false
+checker.checkPassword('s3cret');  // 결과는 true
+```
+
+#passwordHash 속성은 클래스 외부에서 접근할 수 없습니다. 
+
+그러나 클로저 기법과 다르게 클래스 메서드나 동일한 클래스의 개별 인스턴스끼리는 접근이 가능합니다.
