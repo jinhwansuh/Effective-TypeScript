@@ -4220,3 +4220,53 @@ console.log(new Greeter('Dave').greet());
 
 > 일반적으로 타입스크립트 코드에서 모든 타입 정보를 제거하면 자바스크립트가 되지만, 열거형, 매개변수 속성, 트리플 슬래시 임포트, 데코레이터는 타입 정보를 제거한다고 자바스크립트가 되지는 않습니다.
 
+### 아이템 54. 객체를 순회하는 노하우
+
+다음 예제는 정상적으로 실행되지만, 편집기에서는 오류가 발생합니다.
+
+```typescript
+// tsconfig 설정에 따라 오류가 날수도 안날수도 있습니다.
+const obj = {
+  one: 'uno',
+  two: 'dos',
+  three: 'tres',
+};
+for (const k in obj) {
+  const v = obj[k]; // error:
+         // ~~~~~~ Element implicitly has an 'any' type
+         //        because type ... has no index signature
+}
+let k: keyof typeof obj;  // 타입은 "one" | "two" | "three"
+for (k in obj) {
+  const v = obj[k];  // 정상
+}
+```
+
+```typescript
+interface ABC {
+  a: string;
+  b: string;
+  c: number;
+}
+
+function foo(abc: ABC) {
+  for (const k in abc) {  // const k: string
+    const v = abc[k];
+           // ~~~~~~ Element implicitly has an 'any' type
+           //        because type 'ABC' has no index signature
+  }
+}
+const x = {a: 'a', b: 'b', c: 2, d: new Date()};
+foo(x);  // OK
+
+function foo(abc: ABC) {
+  let k: keyof ABC;
+  for (k in abc) {  // let k: "a" | "b" | "c"
+    const v = abc[k];  // 타입은 string | number
+  }
+}
+```
+
+객체를 순회할 때, 키가 어떤 타입인지 정확히 파악하고 있다면 let k: keyof T와 for-in 루프를 사용합니다.
+
+함수의 매개변수로 쓰이는 객체에는 추가적인 키가 존재할 수 있다는 점을 명심합시다.
