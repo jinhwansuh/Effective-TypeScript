@@ -4583,3 +4583,237 @@ checker.checkPassword('s3cret');  // 결과는 true
 
 <br>
 
+
+## 8. 타입스크립트로 마이그레이션하기
+
+타입스크립트는 자바스크립트보다 개선된 언어입니다.
+
+그러므로 프로젝트를 새로 시작한다면 처음부터 타입스크립트를 사용하면 됩니다.
+
+2017년의 한 조사에 따르면 깃헙(GitHub)에 있는 자바스크립트 프로젝트에서 발견된 버그의 15%는, 타입스크립트를 사용했다면 컴파일 시점에서 미리 방지했을 수 있었을 거라고 합니다.
+
+또한 에어비앤비(AirBnB)에서 진행된 프로젝트들의 사후 분석(postmortem) 6개월치를 조사해 보니, 발견된 버그의 38%가 역시 타입스크립트에서는 방지할 수 있었던 것들이라고 합니다.
+
+### 아이템 58. 모던 자바스크립트로 작성하기
+
+타입스크립트는 타입 체크 기능 외에, 타입스크립트 코드를 특정 버전의 자바스크립트로 컴파일하는 기능도 가지고 있습니다.
+
+#### ECMAScript 모듈 사용하기
+
+ES2015 이전에는 코드를 개별 모듈로 분할하는 표준 방법이 없었지만, 지금은 개별 모듈로 분할하는 방법이 많아졌습니다.
+
+```javascript
+// CommonJS
+// a.js
+const b = require('./b');
+console.lof(b.name);
+
+// b.js
+const name = 'Module B';
+module.exports = { name };
+
+// 동일한 기능을 하는 코드를 ES 모듈로 표현하면 다음과 같습니다.
+
+// ECMAScript module
+// a.ts
+import * as b from './b';
+console.log(b.name);
+
+// b.ts
+export const name = 'Module B';
+```
+
+#### 프로토타입 대신 클래스 사용하기
+
+과거에는 자바스크립트에서 프로토타입 기반의 객체 모델을 사용했습니다.
+
+그러나 많은 개발자가 사용하기 애매한 프로토타입 모델보다는 견고하게 설계된 클래스 기반 모델을 선호했기 때문에, 결국 ES2015에 class 키워드를 사용하는 클래스 기반 모델이 도입되었습니다.
+
+만약 마이그레이션하려는 코드에서 단순한 객체를 다룰 때 프로토타입을 사용하고 있었다면 클래스로 바꾸는 것이 좋습니다.
+
+```typescript
+function Person(first, last) {
+  this.first = first;
+  this.last = last;
+}
+
+Person.prototype.getName = function() {
+  return this.first + ' ' + this.last;
+}
+
+// 프로토타입 기반 객체를 클래스 기반 객체로 바꾸면 다음과 같습니다.
+class Person {
+  first: string;
+  last: string;
+
+  constructor(first: string, last: string) {
+    this.first = first;
+    this.last = last;
+  }
+
+  getName() {
+    return this.first + ' ' + this.last;
+  }
+}
+
+const marie = new Person('Marie', 'Curie');
+const personName = marie.getName();
+```
+
+### var 대신 let/const 사용하기
+
+자바스크립트 var 키워드의 스코프(scope) 규칙에 문제가 있다는 것은 널리 알려진 사실입니다.
+
+let과 const는 제대로 된 블록 스코프를 가지며, 개발자들이 일반적으로 기대하는 방식으로 동작합니다.
+
+#### for(;;) 대신 for-of 또는 배열 메서드 사용하기
+
+과거에는 자바스크립트에서 배열을 순회할 때 C 스타일의 for 루프를 사용했습니다.
+
+```javascript
+for (var i = 0; i < array.length; i++) {
+  const el = array[i];
+  // ...
+}
+
+// 모던 자바스크립트에는 for-of 루프가 존재합니다.
+for (const el of array) {
+  // ...
+}
+// 인덱스 변수가 필요한 경우엔 forEach 메서드를 사용하면 됩니다.
+array.forEach((el, i) => {
+  // ...
+});
+```
+
+#### 함수 표현식보다 화살표 함수 사용하기
+
+this 키워드는 일반적인 변수들과는 다른 스코프 규칙을 가지기 때문에, 자바스크립트에서 가장 어려운 개념 중 하나입니다.
+
+일반적으로는 this가 클래스 인스턴스를 참조하는 것을 기대하지만 다음 예제처럼 예상치 못한 결과가 나오는 경우도 있습니다.
+
+```javascript
+class Foo {
+  method() {
+    console.log(this);
+    [1, 2].forEach(function(i) {
+      console.log(this);
+    });
+  }
+}
+const f = new Foo();
+f.method();
+// strict 모드에서 undefined, undefined 를 출력합니다.
+// non-strict 모드에서 Foo, window, window (!) 를 출력합니다.
+
+class Foo {
+  method() {
+    console.log(this);
+    [1, 2].forEach(i => {
+      console.log(this);
+    });
+  }
+}
+const f = new Foo();
+f.method();
+// 항상 Foo, Foo, Foo 를 출력합니다.
+```
+
+인라인(또는 콜백)에서는 일반 함수보다 화살표 함수가 더 직관적이며 코드도 간결해지기 때문에 가급적 화살표 함수를 사용하는 것이 좋습니다.
+
+#### 단축 객체 표현과 구조 분해 할당 사용하기
+
+pt 객체를 생성하는 다음 코드를 보겠습니다.
+
+```javascript
+const x = 1, y = 2, z = 3;
+const pt = {
+  x: x,
+  y: y,
+  z: z
+};
+
+// 이렇게 표현 가능합니다.
+const pt = { x, y, z };
+
+['A', 'B', 'C'].map((char, idx) => ({char, idx}));
+// [ { char: 'A', idx: 0 },  { char: 'B', idx: 1 }, { char: 'C', idx: 2 } ]
+
+
+// 단축 객체 표현(compact object literal)
+const props = obj.props;
+const a = props.a;
+const b = props.b;
+
+const {props} = obj;
+const {a, b} = props;
+
+// 극단적으로는 다음처럼 줄일 수도 있습니다.
+const {props: {a, b}} = obj;
+```
+
+#### 함수 매개변수 기본값 사용하기
+
+```javascript
+function log2(a, b) {
+  console.log(a, b);
+}
+log2(); // undefined undefined
+
+// 기본값을 지정하고 싶을 때, 다음 코드처럼 구현하곤 했습니다.
+function parseNum(str, base) {
+  base = base || 10;
+  return parseInt(str, base);
+}
+
+// 모던 자바스크립트에서는 매개변수에 기본값을 직접 지정할 수 있습니다.
+function parseNum(str, base=10) {
+  return parseInt(str, base);
+}
+```
+
+#### 저수준 프로미스나 콜백 대신 async/await 사용하기
+
+async나 await를 사용하면 코드가 간결해져서 버그나 실수를 방지할 수 있고, 비동기 코드에 타입 정보가 전달되어 타입 추론을 가능하게 한다는 것입니다.
+
+```typescript
+function getJSON(url: string) {
+  return fetch(url).then(response => response.json());
+}
+function getJSONCallback(url: string, cb: (result: unknown) => void) {
+  // ...
+}
+
+// 위 코드보다 아래 코드가 깔끔하고 직관적입니다.
+async function getJSON(url: string) {
+  const response = await fetch(url);
+  return response.json();
+}
+```
+
+#### 연관 배열에 객체 대신 Map과 Set 사용하기
+
+constructor 같은 문자열때문에 원치 않는 값이 나오지 않도록, Map이나 Set을 사용하는게 좋습니다.
+
+```typescript
+function countWordsMap(text: string) {
+  const counts = new Map<string, number>();
+  for (const word of text.split(/[\s,.]+/)) {
+    counts.set(word, 1 + (counts.get(word) || 0))
+  }
+  return counts;
+}
+```
+
+#### 타입스크립트에 use strict 넣지 않기
+
+ES5에서는 버그가 될 수 있는 코드 패턴에 오류를 표시해 주는 엄격 모드가 도입되었습니다.
+
+```javascript
+'use strict'
+function foo() {
+  x = 10; // strict 모드에서는 오류, non-strict 모드에서는 전역 선언
+}
+```
+
+그러나 타입스크립트에서 수행되는 안전성 검사(sanity check)가 엄격 모드보다 훨씬 더 엄격한 체크를 하기 때문에, 타입스크립트 코드에서 'use strict'는 무의미합니다.
