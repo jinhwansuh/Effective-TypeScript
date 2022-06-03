@@ -4817,3 +4817,18 @@ function foo() {
 ```
 
 그러나 타입스크립트에서 수행되는 안전성 검사(sanity check)가 엄격 모드보다 훨씬 더 엄격한 체크를 하기 때문에, 타입스크립트 코드에서 'use strict'는 무의미합니다.
+
+### 아이템 59. 타입스크립트 도입 전에 @ts-check와 JSDoc으로 시험해 보기
+
+@ts-check 지시자를 사용하면 타입스크립트 전환시에 어떤 문제가 발생하는지 미리 시험해 볼 수 있습니다.
+
+@ts-check 지시자를 사용하여 타입체커가 파일을 분석하고, 발견된 오류를 보고하도록 지시합니다.
+
+```typescript
+// @ts-check
+const person = {first: 'Grace', last: 'Hopper'};
+2 * person.first // error: 
+// The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.ts(2363)
+```
+
+> 파일 상단에 // @ts-check를 추가하면 자바스크립트에서도 타입 체크를 수행할 수 있습니다.
