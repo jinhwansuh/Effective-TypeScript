@@ -4846,3 +4846,107 @@ const person = {first: 'Grace', last: 'Hopper'};
 타입 체크와 관련이 없지만, 기존 빌드 과정에 타입스크립트 컴파일러를 추가하기 위해서 allowJs 옵션이 필요합니다.
 
 > 대규모 마이그레이션 작업을 시작하기 전에, 테스트와 빌드 체인에 타입스크립트를 적용해야 합니다.
+
+### 아이템 61. 의존성 관계에 따라 모듈 단위로 전환하기
+
+점진적 마이그레이션을 할 때는 모듈 단위로 각개격파하는 것이 이상적입니다.
+
+그런데 한 모듈을 골라서 타입 정보를 추가하면, 해당 모듈이 의존(임포트)하는 모듈에서 비롯되는 타입 오류가 발생하게 됩니다.
+
+의존성과 관련된 오류없이 작업하려면, 다른 모듈에 의존하지 않는 최하단 모듈부터 작업을 시작해서 의존성의 최상단에 있는 모듈을 마지막으로 완성해야 합니다.
+
+마이그레이션할 때는 타입 정보 추가만 하고, **리팩터링을 해서는 안 됩니다**.
+
+오래된 프로젝트일수록 개선이 필요한 부분을 자주 마주치겠지만, 당장의 목표는 코드 개선이 아니라 타입스크립트 전환하는 것임을 명심해야 합니다.
+
+개선이 필요한 부분을 찾게 된다면 나중에 리팩터링할 수 있도록 목록을 만들어 두면 됩니다.
+
+#### 선언되지 않은 클래스 멤버
+
+자바스크립트는 클래스 멤버 변수를 선언할 필요가 없지만, 타입스크립트에서는 명시적으로 선언해야 합니다.
+
+```typescript
+class Greeting {
+  constructor(name) {
+    this.greeting = 'Hello'; // error:
+// Property 'greeting' does not exist on type 'Greeting'
+    this.name = name; // error:
+// Property 'name' does not exist on type 'Greeting'.
+  }
+  greet() {
+    return this.greeting + ' ' + this.name; // error:
+// Property 'greeting' does not exist on type 'Greeting'.
+// Property 'name' does not exist on type 'Greeting'.
+  }
+}
+```
+
+빠른 수정(quick fix) 기능으로 간단히 해결할 수 있습니다. 
+
+'**누락된 모든 멤버 추가(Add all missing members)**'를 선택하면 타입을 추론하여 선언문이 추가됩니다.
+
+```typescript
+class Greeting {
+  greeting: string;
+  name: any;
+  constructor(name) {
+    this.greeting = 'Hello';
+    this.name = name;
+  }
+  greet() {
+    return this.greeting + ' ' + this.name;
+  }
+}
+```
+greeting에 대한 타입은 string으로 정확히 추론되었지만, name 타입의 경우는 any로 채워졌습니다.
+
+빠른 수정을 적용한 후에 속성을 흝어보고 any로 추론된 부분을 직접 수정해야 합니다.
+
+#### 타입이 바뀌는 값
+
+다음 코드는 자바스크립트일 때는 문제가 없지만, 타입스크립트가 되는 순간 오류가 발생합니다.
+
+```typescript
+const state = {};
+state.name = 'New York'; // error:
+// Property 'name' does not exist on type '{}'.
+state.capital = 'Albany';
+// Property 'capital' does not exist on type '{}'
+```
+
+다음 코드는 자바스크립트 상태에서 제대로 오류를 표시하고 있습니다.
+
+```javascript
+// @ts-check
+/**
+ * @param {number} num
+ */
+function double(num) {
+  return 2 * num;
+}
+
+double('trouble');
+//  Argument of type '"trouble"' is not assignable to parameter of type 'number'
+```
+
+그러나 타입스크립트로 전환하게 되면 @ts-check와 JSDoc은 작동하지 않습니다.
+
+```typescript
+/**
+ * @param {number} num
+ */
+function double(num) {
+  return 2 * num;
+}
+
+double('trouble');  // 정상
+```
+
+마지막 단계로, 테스트 코드를 타입스크립트로 전환하면 됩니다.
+
+로직 코드가 테스트 코드에 의존하지 않기 때문에, 테스트 코드는 항상 의존성 관계도의 최상단에 위치하며 마이그레이션의 마지막 단계가 되는 것은 자연스러운 일입니다.
+
+> 마이그레이션의 첫 단계는, 서드파티 모듈과 외부 API 호출에 대한 @types를 추가하는 것입니다.
+> 
+> 이상한 설계를 발견하더라도 리팩터링을 하면 안됩니다.
+
